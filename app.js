@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const gameProgressLabel = document.getElementById('game-progress-label');
   const gameScoreLabel = document.getElementById('game-score-label');
   const gameScore = document.getElementById('game-score');
+  const timerContainer = document.querySelector('.timer-container');
   const timerBar = document.getElementById('timer-bar');
   const answerInput = document.getElementById('answer-input');
   const comboDisplay = document.getElementById('combo-display');
@@ -195,18 +196,21 @@ document.addEventListener('DOMContentLoaded', () => {
       gameScoreLabel.textContent = 'スコア:';
       gameScore.textContent = '0';
       questionProgress.textContent = `1 / ${totalQuestions}`;
+      timerContainer.style.display = 'none'; // タイマーバー非表示
     } else if (gameMode === 'survival') {
       gameProgressLabel.textContent = '正解数:';
       gameScoreLabel.textContent = '残り時間:';
       gameScore.textContent = '30.0s';
       questionProgress.textContent = '0';
       survivalTime = 30.0;
+      timerContainer.style.display = 'block'; // タイマーバー表示
     } else if (gameMode === 'timeattack') {
       gameProgressLabel.textContent = '問題:';
       gameScoreLabel.textContent = 'タイム:';
       gameScore.textContent = '0.0s';
       questionProgress.textContent = `1 / ${totalQuestions}`;
       elapsedTime = 0.0;
+      timerContainer.style.display = 'none'; // タイマーバー非表示
     }
     
     showScreen('game');
@@ -334,18 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     timeLeft = maxTime;
     
     if (gameMode === 'normal') {
-      updateTimerBar();
-      timerInterval = setInterval(() => {
-        timeLeft -= 0.1;
-        if (timeLeft <= 0) {
-          timeLeft = 0;
-          updateTimerBar();
-          clearInterval(timerInterval);
-          submitAnswer(true);
-        } else {
-          updateTimerBar();
-        }
-      }, 100);
+      // 10問チャレンジ（ノーマルモード）は制限時間なし
     } else if (gameMode === 'survival') {
       timerBar.classList.remove('warning');
       timerInterval = setInterval(() => {
