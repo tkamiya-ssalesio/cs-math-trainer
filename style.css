@@ -1125,3 +1125,39 @@ h1 span {
 .modal-mode-btn.selected .mode-title {
   color: var(--accent-blue);
 }
+
+/* ================== 入力注意書き & 文字数カウンター ================== */
+.input-tip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  width: 100%;
+  max-width: 480px;
+  color: var(--text-secondary);
+}
+
+.input-tip .tip-text {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.input-tip .char-counter {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  color: var(--accent-cyan);
+  transition: var(--transition-smooth);
+}
+
+.input-tip .char-counter.match {
+  color: var(--accent-green);
+  background: rgba(57, 255, 20, 0.08);
+}
+
+.input-tip .char-counter.error {
+  color: #ff3366;
+  background: rgba(255, 51, 102, 0.08);
+}

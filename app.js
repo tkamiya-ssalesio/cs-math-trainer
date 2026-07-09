@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let correctCount = 0;
   let currentCategory = 'bin-dec';
   let pendingMode = ''; // モーダルで選択中のモード
+  let requiredLength = 8; // 必要とされる2進数の文字数（4, 8, 16）
 
   // --- DOM要素の取得 ---
   const screens = {
@@ -64,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const bitInputArea = document.getElementById('bit-input-area');
   const textInputArea = document.getElementById('text-input-area');
+  const binaryInputTip = document.getElementById('binary-input-tip');
+  const charCounter = document.getElementById('char-counter');
 
   const resultScore = document.getElementById('result-score');
   const resultRank = document.getElementById('result-rank');
@@ -242,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setupBitSwitches(currentQuestion.bits);
       bitInputArea.style.display = 'flex';
       answerInput.readOnly = true;
+      binaryInputTip.style.display = 'none';
     } else {
       bitInputArea.style.display = 'none';
       answerInput.readOnly = false;
@@ -249,8 +253,23 @@ document.addEventListener('DOMContentLoaded', () => {
       // スマホなどで開くキーボードの最適化
       if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
         answerInput.setAttribute('inputmode', 'text');
+        binaryInputTip.style.display = 'none';
       } else {
         answerInput.setAttribute('inputmode', 'numeric');
+        
+        // 2進数のテキスト入力時のヒントとカウンタ制御
+        if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+          requiredLength = currentDifficulty === 'easy' ? 4 : (currentDifficulty === 'medium' ? 8 : 16);
+          binaryInputTip.style.display = 'flex';
+          charCounter.textContent = `0 / ${requiredLength} 文字`;
+          charCounter.className = 'char-counter error';
+          
+          // 例の提示
+          const exampleBits = requiredLength === 4 ? '0101' : (requiredLength === 8 ? '00110101' : '0000000000110101');
+          answerInput.placeholder = `例: ${exampleBits} (${requiredLength}-bitに揃える)`;
+        } else {
+          binaryInputTip.style.display = 'none';
+        }
       }
     }
 
@@ -393,6 +412,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     answerInput.value = value;
+
+    // 2進数入力時の文字数カウンタ連動
+    if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+      charCounter.textContent = `${value.length} / ${requiredLength} 文字`;
+      if (value.length === requiredLength) {
+        charCounter.className = 'char-counter match';
+      } else {
+        charCounter.className = 'char-counter error';
+      }
+    }
   });
 
   // 4. 解答提出

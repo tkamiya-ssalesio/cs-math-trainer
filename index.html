@@ -99,8 +99,13 @@
         </div>
 
         <!-- テキスト入力 -->
-        <div id="text-input-area" class="input-wrapper">
+        <div id="text-input-area" class="input-wrapper" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
           <input type="text" id="answer-input" class="text-input" placeholder="回答を入力..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <!-- 2進数桁数に関する注意書きとカウンタ -->
+          <div id="binary-input-tip" class="input-tip" style="display: none;">
+            <span class="tip-text">⚠️ 先頭に0を埋めて桁数を揃えてください</span>
+            <span id="char-counter" class="char-counter">0 / 8 文字</span>
+          </div>
         </div>
 
         <!-- 操作ボタン -->
