@@ -1161,3 +1161,16 @@ h1 span {
   color: #ff3366;
   background: rgba(255, 51, 102, 0.08);
 }
+
+/* 不正解時のブルブル揺れるアニメーション */
+.question-card.incorrect-shake {
+  animation: shake 0.5s ease-in-out;
+  border-color: #ff3366;
+  box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+  20%, 40%, 60%, 80% { transform: translateX(6px); }
+}

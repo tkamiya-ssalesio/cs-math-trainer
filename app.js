@@ -23,8 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentCategory = 'bin-dec';
   let pendingMode = ''; // モーダルで選択中のモード
   let requiredLength = 8; // 必要とされる2進数の文字数（4, 8, 16）
+  let hasMissedCurrentQuestion = false; // 現在の問題で既に間違えたかどうか
 
-  // --- DOM要素の取得 ---
+  // --- DOM要素 of 取得 ---
   const screens = {
     menu: document.getElementById('menu-screen'),
     submenu: document.getElementById('submenu-screen'),
@@ -210,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     maxCombo = 0;
     questionIndex = 1;
     correctCount = 0;
+    hasMissedCurrentQuestion = false;
     results = [];
     
     if (gameMode === 'normal') {
@@ -240,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 2. 次の問題を提示
   function nextQuestion() {
+    hasMissedCurrentQuestion = false;
     if (gameMode !== 'survival' && questionIndex > totalQuestions) {
       endGame();
       return;
@@ -466,15 +469,25 @@ document.addEventListener('DOMContentLoaded', () => {
       isCorrect = false;
     }
 
-    // 正誤に応じた演出とステータス更新
+    // 入力・決定を一時無効化（演出中の連続クリック防止）
+    submitBtn.disabled = true;
+    answerInput.disabled = true;
+    if (currentQuestion.inputType === 'binary') {
+      bitInputArea.querySelectorAll('.bit-switch').forEach(sw => sw.disabled = true);
+    }
+
     if (isCorrect) {
-      correctCount++;
+      // 一発正解の場合のみ正答数としてカウント
+      if (!hasMissedCurrentQuestion) {
+        correctCount++;
+      }
       combo++;
       if (combo > maxCombo) maxCombo = combo;
       
       if (gameMode === 'normal') {
         const comboBonus = Math.min((combo - 1) * 10, 100);
-        const pointsGained = 100 + comboBonus;
+        // 一度でも間違えていた問題は得点を少し減らす（例: 40点）
+        const pointsGained = (hasMissedCurrentQuestion ? 40 : 100) + comboBonus;
         score += pointsGained;
         gameScore.textContent = score;
       } else if (gameMode === 'survival') {
@@ -484,16 +497,40 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 演出
+      questionCard.classList.remove('incorrect-shake');
       questionCard.classList.add('correct');
       if (combo >= 2) {
         comboDisplay.textContent = `COMBO x${combo}`;
         comboDisplay.classList.add('active');
       }
+
+      // 次の問題へ遷移（0.9秒後）
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        answerInput.disabled = false;
+        questionIndex++;
+        nextQuestion();
+      }, 900);
+
     } else {
       combo = 0;
       comboDisplay.classList.remove('active');
-      questionCard.classList.add('incorrect');
       
+      // 不正解の演出（ブルブル揺らす）
+      questionCard.classList.remove('correct');
+      questionCard.classList.add('incorrect-shake');
+
+      // 初回ミス時のみ間違えた問題リストに記録
+      if (!hasMissedCurrentQuestion) {
+        hasMissedCurrentQuestion = true;
+        results.push({
+          question: currentQuestion.question,
+          userAnswer: userAnswer || '（未入力）',
+          correctAnswer: correctAnswer,
+          displayMeta: currentQuestion.displayMeta
+        });
+      }
+
       if (gameMode === 'survival') {
         survivalTime = Math.max(0, survivalTime - 5.0);
         gameScore.textContent = `${survivalTime.toFixed(1)}s`;
@@ -508,28 +545,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 800);
       }
 
-      // 間違えた問題を結果用に記録
-      results.push({
-        question: currentQuestion.question,
-        userAnswer: userAnswer || '（未入力）',
-        correctAnswer: correctAnswer,
-        displayMeta: currentQuestion.displayMeta
-      });
+      // 0.6秒後に再入力できるようにする（次の問題には進まない）
+      setTimeout(() => {
+        questionCard.classList.remove('incorrect-shake');
+        submitBtn.disabled = false;
+        answerInput.disabled = false;
+        
+        if (currentQuestion.inputType === 'binary') {
+          bitInputArea.querySelectorAll('.bit-switch').forEach(sw => sw.disabled = false);
+        } else {
+          // テキスト入力の場合は間違えた値をクリアしてフォーカス
+          answerInput.value = '';
+          if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+            charCounter.textContent = `0 / ${requiredLength} 文字`;
+            charCounter.className = 'char-counter error';
+          }
+          answerInput.focus();
+        }
+        
+        // 再びタイマーを監視開始
+        resetTimer();
+      }, 600);
     }
-
-    // 入力・決定を無効化して一時停止（演出を見せるため）
-    submitBtn.disabled = true;
-    answerInput.disabled = true;
-    if (currentQuestion.inputType === 'binary') {
-      bitInputArea.querySelectorAll('.bit-switch').forEach(sw => sw.disabled = true);
-    }
-
-    setTimeout(() => {
-      submitBtn.disabled = false;
-      answerInput.disabled = false;
-      questionIndex++;
-      nextQuestion();
-    }, 900);
   }
 
   // 5. ゲーム終了 (リザルト表示)
