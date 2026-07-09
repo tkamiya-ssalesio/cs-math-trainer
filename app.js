@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- ゲーム状態変数 ---
   let currentMode = 'bin-to-dec';
   let currentDifficulty = 'medium';
+  let gameMode = 'normal'; // 'normal' | 'survival' | 'timeattack'
   let score = 0;
   let combo = 0;
   let maxCombo = 0;
@@ -15,28 +16,46 @@ document.addEventListener('DOMContentLoaded', () => {
   let timerInterval = null;
   let timeLeft = 15; // 1問あたりの時間制限 (秒)
   const maxTime = 15;
+  let survivalTime = 30.0; // サバイバルモード用残り時間
+  let elapsedTime = 0.0; // タイムアタック用経過時間
   let results = []; // 間違えた問題の履歴: { question, userAnswer, correctAnswer, mode }
   let correctCount = 0;
+  let currentCategory = 'bin-dec';
+  let pendingMode = ''; // モーダルで選択中のモード
 
   // --- DOM要素の取得 ---
   const screens = {
     menu: document.getElementById('menu-screen'),
+    submenu: document.getElementById('submenu-screen'),
     game: document.getElementById('game-screen'),
     result: document.getElementById('result-screen')
   };
 
-  const startBtn = document.getElementById('start-btn');
   const submitBtn = document.getElementById('submit-btn');
   const quitBtn = document.getElementById('quit-btn');
   const restartBtn = document.getElementById('restart-btn');
   const backToMenuBtn = document.getElementById('back-to-menu-btn');
 
-  const modeButtons = document.querySelectorAll('.mode-grid .card-btn');
-  const diffButtons = document.querySelectorAll('.difficulty-selector .diff-btn');
+  // カテゴリ選択 & サブメニューのアクションボタン
+  const categoryButtons = document.querySelectorAll('.category-select-btn');
+  const submenuTitle = document.getElementById('submenu-title');
+  const playATitle = document.getElementById('play-a-title');
+  const playBTitle = document.getElementById('play-b-title');
+  const submenuBackBtn = document.getElementById('submenu-back-btn');
+  const submenuActionButtons = document.querySelectorAll('.submenu-action-btn');
+
+  // 設定モーダル
+  const settingsModal = document.getElementById('settings-modal');
+  const modalCancelBtn = document.getElementById('modal-cancel-btn');
+  const modalStartBtn = document.getElementById('modal-start-btn');
+  const modalDiffTabButtons = document.querySelectorAll('.modal-diff-tab-btn');
+  const modalModeButtons = document.querySelectorAll('.modal-mode-btn');
 
   const questionText = document.getElementById('question-text');
   const questionModeLabel = document.getElementById('question-mode-label');
   const questionProgress = document.getElementById('question-progress');
+  const gameProgressLabel = document.getElementById('game-progress-label');
+  const gameScoreLabel = document.getElementById('game-score-label');
   const gameScore = document.getElementById('game-score');
   const timerBar = document.getElementById('timer-bar');
   const answerInput = document.getElementById('answer-input');
@@ -63,27 +82,102 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- モード・難易度選択イベント ---
-  modeButtons.forEach(btn => {
+  // --- 大カテゴリ選択イベント ---
+  categoryButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      modeButtons.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      currentMode = btn.dataset.mode;
+      currentCategory = btn.dataset.category;
+      
+      // サブメニューのテキストを書き換える
+      if (currentCategory === 'bin-dec') {
+        submenuTitle.textContent = '2進法 ⇔ 10進法';
+        playATitle.textContent = '⚡️ 2進数 → 10進数';
+        playBTitle.textContent = '⚡️ 10進数 → 2進数';
+      } else if (currentCategory === 'bin-hex') {
+        submenuTitle.textContent = '2進法 ⇔ 16進法';
+        playATitle.textContent = '⚡️ 2進数 → 16進数';
+        playBTitle.textContent = '⚡️ 16進数 → 2進数';
+      } else if (currentCategory === 'dec-hex') {
+        submenuTitle.textContent = '10進法 ⇔ 16進法';
+        playATitle.textContent = '⚡️ 10進数 → 16進数';
+        playBTitle.textContent = '⚡️ 16進数 → 10進数';
+      }
+      
+      showScreen('submenu');
     });
   });
 
-  diffButtons.forEach(btn => {
+  // サブメニューの戻るボタン
+  submenuBackBtn.addEventListener('click', () => {
+    showScreen('menu');
+  });
+
+  // --- サブメニューのアクションボタンイベント ---
+  submenuActionButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      diffButtons.forEach(b => b.classList.remove('selected'));
+      const action = btn.dataset.action;
+      
+      if (action === 'learn') {
+        currentTutorialTab = currentCategory;
+        
+        // 解説のタブ（diff-btn）の active クラスも連動させる
+        const tabs = document.querySelectorAll('.learn-tabs .diff-btn');
+        tabs.forEach(t => {
+          if (t.dataset.tab === currentTutorialTab) {
+            t.classList.add('active');
+          } else {
+            t.classList.remove('active');
+          }
+        });
+        
+        showTutorial();
+      } else if (action === 'play-a') {
+        if (currentCategory === 'bin-dec') pendingMode = 'bin-to-dec';
+        else if (currentCategory === 'bin-hex') pendingMode = 'bin-to-hex';
+        else if (currentCategory === 'dec-hex') pendingMode = 'dec-to-hex';
+        
+        // 設定モーダルを表示
+        settingsModal.classList.add('active');
+      } else if (action === 'play-b') {
+        if (currentCategory === 'bin-dec') pendingMode = 'dec-to-bin';
+        else if (currentCategory === 'bin-hex') pendingMode = 'hex-to-bin';
+        else if (currentCategory === 'dec-hex') pendingMode = 'hex-to-dec';
+        
+        // 設定モーダルを表示
+        settingsModal.classList.add('active');
+      }
+    });
+  });
+
+  // --- モーダル内の設定切り替えイベント ---
+  modalDiffTabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalDiffTabButtons.forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       currentDifficulty = btn.dataset.diff;
     });
   });
 
-  // --- ゲーム制御ロジック ---
+  modalModeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalModeButtons.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      gameMode = btn.dataset.mode;
+    });
+  });
 
-  // 1. ゲーム開始
-  startBtn.addEventListener('click', startGame);
+  // モーダルのキャンセルボタン
+  modalCancelBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+  });
+
+  // モーダルのスタートボタン
+  modalStartBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+    currentMode = pendingMode;
+    startGame();
+  });
+
+  // --- ゲーム制御ロジック ---
 
   function startGame() {
     score = 0;
@@ -92,7 +186,25 @@ document.addEventListener('DOMContentLoaded', () => {
     questionIndex = 1;
     correctCount = 0;
     results = [];
-    gameScore.textContent = '0';
+    
+    if (gameMode === 'normal') {
+      gameProgressLabel.textContent = '問題:';
+      gameScoreLabel.textContent = 'スコア:';
+      gameScore.textContent = '0';
+      questionProgress.textContent = `1 / ${totalQuestions}`;
+    } else if (gameMode === 'survival') {
+      gameProgressLabel.textContent = '正解数:';
+      gameScoreLabel.textContent = '残り時間:';
+      gameScore.textContent = '30.0s';
+      questionProgress.textContent = '0';
+      survivalTime = 30.0;
+    } else if (gameMode === 'timeattack') {
+      gameProgressLabel.textContent = '問題:';
+      gameScoreLabel.textContent = 'タイム:';
+      gameScore.textContent = '0.0s';
+      questionProgress.textContent = `1 / ${totalQuestions}`;
+      elapsedTime = 0.0;
+    }
     
     showScreen('game');
     nextQuestion();
@@ -100,13 +212,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 2. 次の問題を提示
   function nextQuestion() {
-    if (questionIndex > totalQuestions) {
+    if (gameMode !== 'survival' && questionIndex > totalQuestions) {
       endGame();
       return;
     }
 
     // UI初期化
-    questionProgress.textContent = `${questionIndex} / ${totalQuestions}`;
+    if (gameMode === 'normal' || gameMode === 'timeattack') {
+      questionProgress.textContent = `${questionIndex} / ${totalQuestions}`;
+    } else if (gameMode === 'survival') {
+      questionProgress.textContent = `${correctCount}`;
+    }
+
     answerInput.value = '';
     answerInput.placeholder = '回答を入力...';
     questionCard.className = 'question-card';
@@ -124,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentQuestion.inputType === 'binary') {
       setupBitSwitches(currentQuestion.bits);
       bitInputArea.style.display = 'flex';
-      // スイッチで入力させるが、テキストボックスも隠し/補助として有効にしておく
       answerInput.readOnly = true;
     } else {
       bitInputArea.style.display = 'none';
@@ -190,20 +306,50 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetTimer() {
     clearInterval(timerInterval);
     timeLeft = maxTime;
-    updateTimerBar();
-
-    timerInterval = setInterval(() => {
-      timeLeft -= 0.1;
-      if (timeLeft <= 0) {
-        timeLeft = 0;
-        updateTimerBar();
-        clearInterval(timerInterval);
-        // 時間切れ判定
-        submitAnswer(true);
-      } else {
-        updateTimerBar();
-      }
-    }, 100);
+    
+    if (gameMode === 'normal') {
+      updateTimerBar();
+      timerInterval = setInterval(() => {
+        timeLeft -= 0.1;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          updateTimerBar();
+          clearInterval(timerInterval);
+          submitAnswer(true);
+        } else {
+          updateTimerBar();
+        }
+      }, 100);
+    } else if (gameMode === 'survival') {
+      timerBar.classList.remove('warning');
+      timerInterval = setInterval(() => {
+        survivalTime -= 0.1;
+        if (survivalTime <= 0) {
+          survivalTime = 0;
+          gameScore.textContent = '0.0s';
+          timerBar.style.width = '0%';
+          clearInterval(timerInterval);
+          endGame();
+        } else {
+          gameScore.textContent = `${survivalTime.toFixed(1)}s`;
+          const percentage = (survivalTime / 30.0) * 100;
+          timerBar.style.width = `${Math.min(100, percentage)}%`;
+          
+          if (survivalTime <= 8.0) {
+            timerBar.classList.add('warning');
+          } else {
+            timerBar.classList.remove('warning');
+          }
+        }
+      }, 100);
+    } else if (gameMode === 'timeattack') {
+      timerBar.style.width = '100%';
+      timerBar.classList.remove('warning');
+      timerInterval = setInterval(() => {
+        elapsedTime += 0.1;
+        gameScore.textContent = `${elapsedTime.toFixed(1)}s`;
+      }, 100);
+    }
   }
 
   function updateTimerBar() {
@@ -234,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const correctAnswer = currentQuestion.answer;
     let isCorrect = false;
 
-    // 16進数の場合は大文字・小文字を区別せず比較
     if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
       isCorrect = userAnswer.toUpperCase() === correctAnswer.toUpperCase();
     } else {
@@ -252,11 +397,16 @@ document.addEventListener('DOMContentLoaded', () => {
       combo++;
       if (combo > maxCombo) maxCombo = combo;
       
-      // スコア計算：基本点100 + コンボボーナス（最大+100）
-      const comboBonus = Math.min((combo - 1) * 10, 100);
-      const pointsGained = 100 + comboBonus;
-      score += pointsGained;
-      gameScore.textContent = score;
+      if (gameMode === 'normal') {
+        const comboBonus = Math.min((combo - 1) * 10, 100);
+        const pointsGained = 100 + comboBonus;
+        score += pointsGained;
+        gameScore.textContent = score;
+      } else if (gameMode === 'survival') {
+        const recoverTime = 3 + Math.min(combo * 0.5, 5);
+        survivalTime = Math.min(30.0, survivalTime + recoverTime);
+        gameScore.textContent = `${survivalTime.toFixed(1)}s`;
+      }
 
       // 演出
       questionCard.classList.add('correct');
@@ -269,6 +419,20 @@ document.addEventListener('DOMContentLoaded', () => {
       comboDisplay.classList.remove('active');
       questionCard.classList.add('incorrect');
       
+      if (gameMode === 'survival') {
+        survivalTime = Math.max(0, survivalTime - 5.0);
+        gameScore.textContent = `${survivalTime.toFixed(1)}s`;
+      } else if (gameMode === 'timeattack') {
+        elapsedTime += 3.0;
+        gameScore.textContent = `${elapsedTime.toFixed(1)}s`;
+        
+        // 赤く光らせるペナルティ演出
+        gameScore.style.color = '#ff3366';
+        setTimeout(() => {
+          gameScore.style.color = '';
+        }, 800);
+      }
+
       // 間違えた問題を結果用に記録
       results.push({
         question: currentQuestion.question,
@@ -294,28 +458,80 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 5. ゲーム終了 (リザルト表示)
+  const resultTitle = document.getElementById('result-title');
+  const resultMeta = document.getElementById('result-meta');
+
   function endGame() {
     clearInterval(timerInterval);
     showScreen('result');
 
-    resultScore.textContent = score.toLocaleString();
-    
-    const accuracy = Math.round((correctCount / totalQuestions) * 100);
-    resultAccuracy.textContent = `${accuracy}%`;
-    resultMaxCombo.textContent = maxCombo;
+    let diffJA = '中級';
+    if (currentDifficulty === 'easy') diffJA = '初級';
+    else if (currentDifficulty === 'hard') diffJA = '上級';
 
-    // 評価ランクの算出
-    let rankText = '';
-    if (accuracy === 100) {
-      rankText = '🎉 パーフェクト！あなたこそデジタルマスターです！';
-    } else if (accuracy >= 80) {
-      rankText = '✨ 素晴らしい！計算のコツを完全に掴んでいますね。';
-    } else if (accuracy >= 50) {
-      rankText = '👍 あと少し！繰り返し練習してスピードアップを目指そう。';
-    } else {
-      rankText = '📚 まずは初級からじっくり基礎を復習してみましょう！';
+    if (gameMode === 'normal') {
+      resultTitle.textContent = 'TRAINING COMPLETED';
+      resultScore.textContent = score.toLocaleString();
+      resultMeta.textContent = `難易度: ${diffJA} / ルール: 10問チャレンジ`;
+      
+      const accuracy = Math.round((correctCount / totalQuestions) * 100);
+      resultAccuracy.textContent = `${accuracy}%`;
+      
+      let rankText = '';
+      if (accuracy === 100) {
+        rankText = '🎉 パーフェクト！あなたこそデジタルマスターです！';
+      } else if (accuracy >= 80) {
+        rankText = '✨ 素晴らしい！計算のコツを完全に掴んでいますね。';
+      } else if (accuracy >= 50) {
+        rankText = '👍 あと少し！繰り返し練習してスピードアップを目指そう。';
+      } else {
+        rankText = '📚 まずは初級からじっくり基礎を復習してみましょう！';
+      }
+      resultRank.textContent = rankText;
+      
+    } else if (gameMode === 'survival') {
+      resultTitle.textContent = 'SURVIVAL OVER';
+      resultScore.textContent = `${correctCount} 問`;
+      resultMeta.textContent = `難易度: ${diffJA} / ルール: エンドレス・サバイバル`;
+      
+      const totalAttempted = correctCount + results.length;
+      const accuracy = totalAttempted > 0 ? Math.round((correctCount / totalAttempted) * 100) : 0;
+      resultAccuracy.textContent = `${accuracy}%`;
+
+      let rankText = '';
+      if (correctCount >= 30) {
+        rankText = '👑 異次元の集中力！あなたは伝説のサバイバーです！';
+      } else if (correctCount >= 15) {
+        rankText = '🔥 素晴らしい耐久力！高精度な進数計算を維持できています。';
+      } else if (correctCount >= 7) {
+        rankText = '👍 健闘！ミスを減らすと、さらに長く生き残れますよ。';
+      } else {
+        rankText = '📚 焦らず正確に解くことから始めてみましょう！';
+      }
+      resultRank.textContent = rankText;
+      
+    } else if (gameMode === 'timeattack') {
+      resultTitle.textContent = 'TIME ATTACK COMPLETED';
+      resultScore.textContent = `${elapsedTime.toFixed(1)} 秒`;
+      resultMeta.textContent = `難易度: ${diffJA} / ルール: タイムアタック (ミス +3秒)`;
+      
+      const accuracy = Math.round((correctCount / totalQuestions) * 100);
+      resultAccuracy.textContent = `${accuracy}%`;
+
+      let rankText = '';
+      if (elapsedTime <= 25.0 && accuracy === 100) {
+        rankText = '⚡️ 光速クリア！計算速度も精度も完璧で文句なしです！';
+      } else if (elapsedTime <= 45.0) {
+        rankText = '✨ とてもスピーディー！脳内変換がかなりスムーズです。';
+      } else if (elapsedTime <= 80.0) {
+        rankText = '👍 ナイスファイト！タイピングと暗算の速度アップを目指そう。';
+      } else {
+        rankText = '📚 正確に答えられるとペナルティ秒数を防いで早くなりますよ！';
+      }
+      resultRank.textContent = rankText;
     }
-    resultRank.textContent = rankText;
+    
+    resultMaxCombo.textContent = maxCombo;
 
     // 復習リストの表示
     reviewList.innerHTML = '';
@@ -348,17 +564,16 @@ document.addEventListener('DOMContentLoaded', () => {
   quitBtn.addEventListener('click', () => {
     if (confirm('ゲームを途中で終了してメニューに戻りますか？')) {
       clearInterval(timerInterval);
-      showScreen('menu');
+      showScreen('submenu');
     }
   });
 
   restartBtn.addEventListener('click', startGame);
-  backToMenuBtn.addEventListener('click', () => showScreen('menu'));
+  backToMenuBtn.addEventListener('click', () => showScreen('submenu'));
 
   // ================== 解説画面 (Learn Screen) の制御 ==================
   
   // DOM要素の追加取得
-  const toLearnBtn = document.getElementById('to-learn-btn');
   const learnCloseBtn = document.getElementById('learn-close-btn');
   const learnPrevBtn = document.getElementById('learn-prev-btn');
   const learnNextBtn = document.getElementById('learn-next-btn');
@@ -719,7 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateTutorial();
     } else {
       // 完了したらメニューに戻る
-      showScreen('menu');
+      showScreen('submenu');
     }
   });
 
@@ -731,6 +946,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ボタンイベントの紐付け
-  toLearnBtn.addEventListener('click', showTutorial);
-  learnCloseBtn.addEventListener('click', () => showScreen('menu'));
+  learnCloseBtn.addEventListener('click', () => showScreen('submenu'));
+
+  // キーボードの左右キーによるスライド切り替え
+  document.addEventListener('keydown', (e) => {
+    // 解説画面がアクティブな場合のみ反応させる
+    if (screens.learn && screens.learn.classList.contains('active')) {
+      if (e.key === 'ArrowRight') {
+        // 次へ
+        if (!learnNextBtn.disabled) {
+          learnNextBtn.click();
+        }
+      } else if (e.key === 'ArrowLeft') {
+        // 前へ
+        if (!learnPrevBtn.disabled) {
+          learnPrevBtn.click();
+        }
+      }
+    }
+  });
 });

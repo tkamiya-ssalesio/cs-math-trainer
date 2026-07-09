@@ -19,53 +19,50 @@
     <section id="menu-screen" class="screen active">
       <div class="menu-section">
         <h2 class="section-title">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6 1v3H3v2h3v3h2V6h3V4H8V1H6z"/><path d="M4 6.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-7zm1 .5v6h6V7H5z"/></svg>
-          トレーニングモード
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.5 5.6a.5.5 0 1 0-1 0v2.9h-3a.5.5 0 0 0 0 1h3V12.4a.5.5 0 1 0 1 0V9.5h3a.5.5 0 0 0 0-1h-3V5.6z"/><path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
+          学習カテゴリの選択
         </h2>
-        <div class="mode-grid">
-          <button class="card-btn selected" data-mode="bin-to-dec">
-            <span class="card-title">2進数 → 10進数</span>
-            <span class="card-desc">0と1の組み合わせから通常の数値へ変換します。</span>
+        <div class="mode-grid" style="grid-template-columns: 1fr; gap: 1.2rem;">
+          <button class="card-btn category-select-btn" data-category="bin-dec">
+            <span class="card-title">2進法 ⇔ 10進法</span>
+            <span class="card-desc">すだれ算による2進数への変換や、各桁の重み（2の累乗）を使った10進数への変換を学習します。</span>
           </button>
-          <button class="card-btn" data-mode="dec-to-bin">
-            <span class="card-title">10進数 → 2進数</span>
-            <span class="card-desc">数値をビット表現(0と1)に分解して入力します。</span>
+          <button class="card-btn category-select-btn" data-category="bin-hex">
+            <span class="card-title">2進法 ⇔ 16進法</span>
+            <span class="card-desc">4ビット区切りを用いた、2進数と16進数の手軽な変換方法を学習します。</span>
           </button>
-          <button class="card-btn" data-mode="dec-to-hex">
-            <span class="card-title">10進数 → 16進数</span>
-            <span class="card-desc">数値を0〜9、A〜Fで表現される16進数に変換します。</span>
-          </button>
-          <button class="card-btn" data-mode="hex-to-dec">
-            <span class="card-title">16進数 → 10進数</span>
-            <span class="card-desc">16進数の値から通常の数値へ逆変換します。</span>
-          </button>
-          <button class="card-btn" data-mode="bin-to-hex">
-            <span class="card-title">2進数 → 16進数</span>
-            <span class="card-desc">0と1の組み合わせから16進数へ変換します。</span>
-          </button>
-          <button class="card-btn" data-mode="hex-to-bin">
-            <span class="card-title">16進数 → 2進数</span>
-            <span class="card-desc">16進数の値からビット表現(0と1)へ変換します。</span>
+          <button class="card-btn category-select-btn" data-category="dec-hex">
+            <span class="card-title">10進法 ⇔ 16進法</span>
+            <span class="card-desc">16で割るすだれ算や、各桁 of 重み（16の累乗）を用いた16進数から10進数への戻し方を学習します。</span>
           </button>
         </div>
       </div>
+    </section>
 
+    <!-- =============== 1.5 サブメニュー画面 =============== -->
+    <section id="submenu-screen" class="screen">
+      <h2 class="section-title" id="submenu-title" style="margin-bottom: 1.5rem; text-align: center; color: var(--accent-cyan); font-size: 1.5rem;">カテゴリタイトル</h2>
+
+      <!-- アクション選択 -->
       <div class="menu-section">
-        <h2 class="section-title">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2 6a6 6 0 1 1 10.174 4.31c-.203.196-.359.4-.453.619l-.762 1.769A.5.5 0 0 1 9.5 13h-3a.5.5 0 0 1-.46-.31l-.761-1.77c-.094-.217-.25-.422-.453-.618A5.984 5.984 0 0 1 2 6zm7 8.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1z"/></svg>
-          難易度
-        </h2>
-        <div class="difficulty-selector">
-          <button class="diff-btn" data-diff="easy">初級 (4-bit)</button>
-          <button class="diff-btn selected" data-diff="medium">中級 (8-bit)</button>
-          <button class="diff-btn" data-diff="hard">上級 (16-bit)</button>
+        <h3 class="section-title" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">学習アクションの選択</h3>
+        <div class="mode-grid" style="grid-template-columns: 1fr; gap: 1rem;">
+          <button class="card-btn submenu-action-btn" data-action="learn" style="border-color: rgba(79, 172, 254, 0.15);">
+            <span class="card-title" style="color: var(--accent-blue);">📘 変換方法の解説</span>
+            <span class="card-desc">ステップごとのアニメーションで計算アルゴリズムを学びます。</span>
+          </button>
+          <button class="card-btn submenu-action-btn" data-action="play-a" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="play-a-title" style="color: var(--accent-green);">⚡️ A ➔ B のトレーニング</span>
+            <span class="card-desc">ランダムに生成される問題に挑戦し、得点とコンボを競います。</span>
+          </button>
+          <button class="card-btn submenu-action-btn" data-action="play-b" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="play-b-title" style="color: var(--accent-green);">⚡️ B ➔ A のトレーニング</span>
+            <span class="card-desc">逆方向の変換問題に挑戦し、計算スピードを鍛えます。</span>
+          </button>
         </div>
       </div>
 
-      <div style="display: flex; gap: 0.8rem; margin-top: 2rem;">
-        <button id="start-btn" class="btn-primary" style="flex: 2; margin-top: 0;">トレーニング開始</button>
-        <button id="to-learn-btn" class="btn-secondary" style="flex: 1; margin-top: 0;">解説を見る</button>
-      </div>
+      <button id="submenu-back-btn" class="btn-secondary" style="width: 100%; margin-top: 2rem;">カテゴリ選択に戻る</button>
     </section>
 
     <!-- =============== 2. プレイ画面 =============== -->
@@ -77,11 +74,11 @@
         </div>
         <div class="game-stats">
           <div class="stat-badge">
-            <span class="stat-label">問題:</span>
+            <span id="game-progress-label" class="stat-label">問題:</span>
             <span id="question-progress" class="stat-value">1 / 10</span>
           </div>
           <div class="stat-badge">
-            <span class="stat-label">スコア:</span>
+            <span id="game-score-label" class="stat-label">スコア:</span>
             <span id="game-score" class="stat-value high">0</span>
           </div>
         </div>
@@ -117,8 +114,9 @@
     <!-- =============== 3. リザルト画面 =============== -->
     <section id="result-screen" class="screen">
       <div class="result-card">
-        <h2 class="section-title" style="text-align: center;">TRAINING COMPLETED</h2>
+        <h2 class="section-title" id="result-title" style="text-align: center;">TRAINING COMPLETED</h2>
         <div id="result-score" class="score-hero">1,250</div>
+        <p id="result-meta" style="text-align: center; margin-top: -0.8rem; margin-bottom: 1.2rem; font-size: 0.85rem; color: var(--text-secondary);">難易度: 中級 / ルール: 10問チャレンジ</p>
         <p class="subtitle" id="result-rank">素晴らしい！ 進数マスターの素質があります。</p>
 
         <div class="stats-grid">
@@ -177,6 +175,49 @@
       </div>
     </section>
   </main>
+
+  <!-- =============== 5. 難易度選択モーダル =============== -->
+  <!-- =============== 5. トレーニング設定モーダル =============== -->
+  <div id="settings-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 460px;">
+      <h3 class="modal-title">トレーニング設定</h3>
+      <p class="modal-desc">難易度とルールを選択して開始します。</p>
+
+      <!-- 難易度選択 -->
+      <div style="margin-bottom: 1.5rem;">
+        <h4 style="text-align: left; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem; font-weight: 600;">難易度の選択</h4>
+        <div class="modal-difficulty-selector">
+          <button class="modal-diff-tab-btn" data-diff="easy">初級<br><span style="font-size: 0.7rem; opacity: 0.8;">4-bit</span></button>
+          <button class="modal-diff-tab-btn selected" data-diff="medium">中級<br><span style="font-size: 0.7rem; opacity: 0.8;">8-bit</span></button>
+          <button class="modal-diff-tab-btn" data-diff="hard">上級<br><span style="font-size: 0.7rem; opacity: 0.8;">16-bit</span></button>
+        </div>
+      </div>
+
+      <!-- ゲームモード選択 -->
+      <div style="margin-bottom: 1.8rem;">
+        <h4 style="text-align: left; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.6rem; font-weight: 600;">ルール（ゲームモード）の選択</h4>
+        <div class="modal-mode-options">
+          <button class="modal-mode-btn selected" data-mode="normal">
+            <span class="mode-title">⚡️ 10問チャレンジ</span>
+            <span class="mode-desc">1問15秒の制限時間で、全10問の正確さを競います。</span>
+          </button>
+          <button class="modal-mode-btn" data-mode="survival">
+            <span class="mode-title">🔥 エンドレス・サバイバル</span>
+            <span class="mode-desc">初期残り時間30秒。正解で時間回復、ミスで減少。時間切れまで挑戦！</span>
+          </button>
+          <button class="modal-mode-btn" data-mode="timeattack">
+            <span class="mode-title">⏱️ タイムアタック</span>
+            <span class="mode-desc">全10問を解ききるまでの合計タイムを競います（ミスは+3秒ペナルティ）。</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.8rem; margin-top: 1.5rem;">
+        <button id="modal-cancel-btn" class="btn-secondary" style="flex: 1; margin-top: 0;">キャンセル</button>
+        <button id="modal-start-btn" class="btn-primary" style="flex: 2; margin-top: 0;">スタート</button>
+      </div>
+    </div>
+  </div>
 
   <script src="generators.js"></script>
   <script src="app.js"></script>
