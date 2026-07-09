@@ -245,6 +245,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       bitInputArea.style.display = 'none';
       answerInput.readOnly = false;
+      
+      // スマホなどで開くキーボードの最適化
+      if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
+        answerInput.setAttribute('inputmode', 'text');
+      } else {
+        answerInput.setAttribute('inputmode', 'numeric');
+      }
     }
 
     // フォーカス
@@ -362,6 +369,31 @@ document.addEventListener('DOMContentLoaded', () => {
       timerBar.classList.remove('warning');
     }
   }
+
+  // 入力時の全角→半角の自動変換および不正文字のフィルタリング
+  answerInput.addEventListener('input', () => {
+    let value = answerInput.value;
+    
+    // 全角英数字を半角に変換
+    value = value.replace(/[０-９ａ-ｚＡ-Ｚ]/g, (s) => {
+      return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+
+    // モードごとの入力制御
+    if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+      // 2進数入力: 0と1のみ
+      value = value.replace(/[^01]/g, '');
+    } else if (currentMode === 'bin-to-dec' || currentMode === 'hex-to-dec') {
+      // 10進数入力: 0-9のみ
+      value = value.replace(/[^0-9]/g, '');
+    } else if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
+      // 16進数入力: 0-9, a-f, A-F のみ。かつ大文字に自動変換
+      value = value.replace(/[^0-9a-fA-F]/g, '');
+      value = value.toUpperCase();
+    }
+
+    answerInput.value = value;
+  });
 
   // 4. 解答提出
   submitBtn.addEventListener('click', () => submitAnswer(false));
