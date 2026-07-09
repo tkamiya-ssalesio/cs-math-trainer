@@ -375,7 +375,66 @@ document.addEventListener('DOMContentLoaded', () => {
   const tutorials = {
     'bin-dec': [
       {
-        text: '<strong>2進数 ➔ 10進数への変換</strong><br>日常使う10進数（0〜9）に対して、コンピュータ内部では0と1だけの「2進数」が使われます。<br>スライド資料の例題に沿って、2進数の <strong>11101</strong> を10進数に変換してみましょう。',
+        text: '<strong>10進数 ➔ 2進数への変換（すだれ算）</strong><br>日常使う10進数（0〜9）に対して、コンピュータ内部では0と1だけの「2進数」が使われます。<br>まずは10進数から2進数へ変換する方法を学びましょう。商が0になるまで**2で割り続け、余りを記録**します。<br>例として、10進数の <strong>155</strong> を変換してみましょう。',
+        render: () => `
+          <div class="sudare-container" id="sudare-box">
+            <div class="sudare-line" style="animation-delay: 0.1s;"><span class="sudare-op">2 )</span><span class="sudare-num">155</span><span class="sudare-rem"></span></div>
+          </div>
+        `,
+        action: () => {}
+      },
+      {
+        text: '<strong>2で割り続け、余りを並べる</strong><br>155を2で割った余りは1、商は77。<br>その77をさらに2で割り続け、商がなくなるまで繰り返します。<br>スライドと同様に筆算を組み立てていきます。',
+        render: () => `
+          <div class="sudare-container" id="sudare-box">
+            <div class="sudare-line" style="animation-delay: 0.1s;"><span class="sudare-op">2 )</span><span class="sudare-num">155</span><span class="sudare-rem"></span></div>
+            <div class="sudare-line" style="animation-delay: 0.3s;"><span class="sudare-op">2 )</span><span class="sudare-num">77</span><span class="sudare-rem">... 1</span></div>
+            <div class="sudare-line" style="animation-delay: 0.5s;"><span class="sudare-op">2 )</span><span class="sudare-num">38</span><span class="sudare-rem">... 1</span></div>
+            <div class="sudare-line" style="animation-delay: 0.7s;"><span class="sudare-op">2 )</span><span class="sudare-num">19</span><span class="sudare-rem">... 0</span></div>
+            <div class="sudare-line" style="animation-delay: 0.9s;"><span class="sudare-op">2 )</span><span class="sudare-num">9</span><span class="sudare-rem">... 1</span></div>
+            <div class="sudare-line" style="animation-delay: 1.1s;"><span class="sudare-op">2 )</span><span class="sudare-num">4</span><span class="sudare-rem">... 1</span></div>
+            <div class="sudare-line" style="animation-delay: 1.3s;"><span class="sudare-op">2 )</span><span class="sudare-num">2</span><span class="sudare-rem">... 0</span></div>
+            <div class="sudare-line" style="animation-delay: 1.5s;"><span class="sudare-last-num">1</span><span class="sudare-rem">... 0</span></div>
+          </div>
+        `,
+        action: () => {}
+      },
+      {
+        text: '<strong>下から上に向かって余りを読む</strong><br>最後の商「1」からスタートして、**下から順に余り（0と1）を並べます**。<br>並べると <strong>10011011</strong> となります。<br>よって、155<sub>(10)</sub> は <strong>10011011<sub>(2)</sub></strong> です。',
+        render: () => `
+          <div class="sudare-container" id="sudare-box" style="position: relative;">
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">155</span><span class="sudare-rem" id="r6"></span></div>
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">77</span><span class="sudare-rem" id="r5">... 1</span></div>
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">38</span><span class="sudare-rem" id="r4">... 1</span></div>
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">19</span><span class="sudare-rem" id="r3">... 0</span></div>
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">9</span><span class="sudare-rem" id="r2">... 1</span></div>
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">4</span><span class="sudare-rem" id="r1">... 1</span></div>
+            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">2</span><span class="sudare-rem" id="r0">... 0</span></div>
+            <div class="sudare-line" style="opacity: 1;" id="rl"><span class="sudare-last-num">1</span><span class="sudare-rem">... 0</span></div>
+            
+            <svg class="sudare-arrow-svg" id="arrow-svg" viewBox="0 0 40 140">
+              <path d="M 30 130 L 10 130 L 10 10 L 30 10" />
+              <path d="M 20 15 L 30 10 L 20 5" />
+            </svg>
+          </div>
+        `,
+        action: () => {
+          setTimeout(() => {
+            document.getElementById('arrow-svg').classList.add('draw');
+          }, 100);
+          
+          // 下から順番に数字をハイライトする演出
+          const rows = ['rl', 'r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
+          rows.forEach((id, idx) => {
+            setTimeout(() => {
+              const el = document.getElementById(id);
+              if (el) el.classList.add('highlight');
+            }, 600 + idx * 200);
+          });
+        }
+      },
+      {
+        text: '<strong>2進数 ➔ 10進数への変換</strong><br>次に、2進数から10進数へ戻す方法を学びましょう。<br>スライド資料の例題に沿って、2進数の <strong>11101</strong> を10進数に変換してみます。',
         render: () => `
           <div class="bit-calc-container">
             <div class="bit-row">
@@ -460,64 +519,65 @@ document.addEventListener('DOMContentLoaded', () => {
             res.style.color = 'var(--accent-green)';
           }, 300);
         }
-      },
+      }
+    ],
+    'bin-hex': [
       {
-        text: '<strong>10進数 ➔ 2進数への変換（すだれ算）</strong><br>逆に、10進数を2進数へ変換するには、商が0になるまで**2で割り続け、余りを記録**します。<br>例として、10進数の <strong>155</strong> を変換してみましょう。',
+        text: '<strong>2進数 ⇔ 16進数の変換（4ビット区切り）</strong><br>2進数の「4ビット（0000〜1111＝0〜15）」は、16進数の「ちょうど1桁（0〜F）」に対応します。<br>この性質を利用して、**2進数を右から4ビットずつに区切って変換する**と簡単に相互変換できます。',
         render: () => `
-          <div class="sudare-container" id="sudare-box">
-            <div class="sudare-line" style="animation-delay: 0.1s;"><span class="sudare-op">2 )</span><span class="sudare-num">155</span><span class="sudare-rem"></span></div>
+          <div class="split-bin-container">
+            <div class="bin-grouped" id="bin-source">00011101</div>
+            <div class="split-arrows" id="bin-source-arrows">↓ ↓</div>
           </div>
         `,
         action: () => {}
       },
       {
-        text: '<strong>2で割り続け、余りを並べる</strong><br>155を2で割った余りは1、商は77。<br>その77をさらに2で割り続け、商がなくなるまで繰り返します。<br>スライドと同様に筆算を組み立てていきます。',
+        text: '<strong>4ビットずつに区切って変換</strong><br>2進数 <strong>00011101</strong> を右から4桁で区切り、<strong>0001</strong> と <strong>1101</strong> の2グループにします。<br>それぞれを独立して16進数に変換します。<br>・<strong>0001<sub>(2)</sub></strong> ➔ <strong>1<sub>(16)</sub></strong><br>・<strong>1101<sub>(2)</sub></strong> ➔ 13 ➔ <strong>D<sub>(16)</sub></strong>',
         render: () => `
-          <div class="sudare-container" id="sudare-box">
-            <div class="sudare-line" style="animation-delay: 0.1s;"><span class="sudare-op">2 )</span><span class="sudare-num">155</span><span class="sudare-rem"></span></div>
-            <div class="sudare-line" style="animation-delay: 0.3s;"><span class="sudare-op">2 )</span><span class="sudare-num">77</span><span class="sudare-rem">... 1</span></div>
-            <div class="sudare-line" style="animation-delay: 0.5s;"><span class="sudare-op">2 )</span><span class="sudare-num">38</span><span class="sudare-rem">... 1</span></div>
-            <div class="sudare-line" style="animation-delay: 0.7s;"><span class="sudare-op">2 )</span><span class="sudare-num">19</span><span class="sudare-rem">... 0</span></div>
-            <div class="sudare-line" style="animation-delay: 0.9s;"><span class="sudare-op">2 )</span><span class="sudare-num">9</span><span class="sudare-rem">... 1</span></div>
-            <div class="sudare-line" style="animation-delay: 1.1s;"><span class="sudare-op">2 )</span><span class="sudare-num">4</span><span class="sudare-rem">... 1</span></div>
-            <div class="sudare-line" style="animation-delay: 1.3s;"><span class="sudare-op">2 )</span><span class="sudare-num">2</span><span class="sudare-rem">... 0</span></div>
-            <div class="sudare-line" style="animation-delay: 1.5s;"><span class="sudare-last-num">1</span><span class="sudare-rem">... 0</span></div>
-          </div>
-        `,
-        action: () => {}
-      },
-      {
-        text: '<strong>下から上に向かって余りを読む</strong><br>最後の商「1」からスタートして、**下から順に余り（0と1）を並べます**。<br>並べると <strong>10011011</strong> となります。<br>よって、155<sub>(10)</sub> は <strong>10011011<sub>(2)</sub></strong> です。',
-        render: () => `
-          <div class="sudare-container" id="sudare-box" style="position: relative;">
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">155</span><span class="sudare-rem" id="r6"></span></div>
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">77</span><span class="sudare-rem" id="r5">... 1</span></div>
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">38</span><span class="sudare-rem" id="r4">... 1</span></div>
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">19</span><span class="sudare-rem" id="r3">... 0</span></div>
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">9</span><span class="sudare-rem" id="r2">... 1</span></div>
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">4</span><span class="sudare-rem" id="r1">... 1</span></div>
-            <div class="sudare-line" style="opacity: 1;"><span class="sudare-op">2 )</span><span class="sudare-num">2</span><span class="sudare-rem" id="r0">... 0</span></div>
-            <div class="sudare-line" style="opacity: 1;" id="rl"><span class="sudare-last-num">1</span><span class="sudare-rem">... 0</span></div>
-            
-            <svg class="sudare-arrow-svg" id="arrow-svg" viewBox="0 0 40 140">
-              <path d="M 30 130 L 10 130 L 10 10 L 30 10" />
-              <path d="M 20 15 L 30 10 L 20 5" />
-            </svg>
+          <div class="split-bin-container">
+            <div class="bin-grouped">
+              <span class="bin-part left" id="bp-l">0001</span>
+              <span class="bin-part right" id="bp-r">1101</span>
+            </div>
+            <div class="split-arrows show">↓ &nbsp; &nbsp; &nbsp; &nbsp; ↓</div>
+            <div class="hex-result-row" id="hex-res-row">
+              <span class="hex-digit left">1</span>
+              <span class="hex-digit right">D</span>
+            </div>
           </div>
         `,
         action: () => {
           setTimeout(() => {
-            document.getElementById('arrow-svg').classList.add('draw');
+            document.getElementById('bp-l').style.boxShadow = '0 0 10px rgba(79, 172, 254, 0.3)';
+            document.getElementById('bp-r').style.boxShadow = '0 0 10px rgba(0, 242, 254, 0.3)';
           }, 100);
-          
-          // 下から順番に数字をハイライトする演出
-          const rows = ['rl', 'r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
-          rows.forEach((id, idx) => {
-            setTimeout(() => {
-              const el = document.getElementById(id);
-              if (el) el.classList.add('highlight');
-            }, 600 + idx * 200);
-          });
+          setTimeout(() => {
+            document.getElementById('hex-res-row').classList.add('show');
+          }, 600);
+        }
+      },
+      {
+        text: '<strong>変換結果を結合する</strong><br>それぞれの変換結果 <strong>1</strong> と <strong>D</strong> をそのまま並べて結合します。<br><strong>1D<sub>(16)</sub></strong> となります。<br>スライド資料に示されている通り、2進数 <strong>00011101<sub>(2)</sub></strong> は16進数で <strong>1D<sub>(16)</sub></strong> であることが確かめられました！',
+        render: () => `
+          <div class="split-bin-container">
+            <div class="hex-result-row show" style="gap: 1.5rem;">
+              <span class="hex-digit left" id="final-l">1</span>
+              <span class="hex-digit right" id="final-r">D</span>
+            </div>
+            <div class="hex-final" id="final-combine">1D<sub>(16)</sub></div>
+          </div>
+        `,
+        action: () => {
+          setTimeout(() => {
+            document.getElementById('final-l').style.transform = 'translateX(12px)';
+            document.getElementById('final-r').style.transform = 'translateX(-12px)';
+            document.getElementById('final-l').style.transition = 'all 0.5s ease';
+            document.getElementById('final-r').style.transition = 'all 0.5s ease';
+          }, 200);
+          setTimeout(() => {
+            document.getElementById('final-combine').classList.add('show');
+          }, 700);
         }
       }
     ],
@@ -589,66 +649,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `,
         action: () => {}
-      }
-    ],
-    'bin-hex': [
-      {
-        text: '<strong>2進数 ⇔ 16進数の変換（4ビット区切り）</strong><br>2進数の「4ビット（0000〜1111＝0〜15）」は、16進数の「ちょうど1桁（0〜F）」に対応します。<br>この性質を利用して、**2進数を右から4ビットずつに区切って変換する**と簡単に相互変換できます。',
-        render: () => `
-          <div class="split-bin-container">
-            <div class="bin-grouped" id="bin-source">00011101</div>
-            <div class="split-arrows" id="split-arrows">↓ ↓</div>
-          </div>
-        `,
-        action: () => {}
-      },
-      {
-        text: '<strong>4ビットずつに区切って変換</strong><br>2進数 <strong>00011101</strong> を右から4桁で区切り、<strong>0001</strong> と <strong>1101</strong> の2グループにします。<br>それぞれを独立して16進数に変換します。<br>・<strong>0001<sub>(2)</sub></strong> ➔ <strong>1<sub>(16)</sub></strong><br>・<strong>1101<sub>(2)</sub></strong> ➔ 13 ➔ <strong>D<sub>(16)</sub></strong>',
-        render: () => `
-          <div class="split-bin-container">
-            <div class="bin-grouped">
-              <span class="bin-part left" id="bp-l">0001</span>
-              <span class="bin-part right" id="bp-r">1101</span>
-            </div>
-            <div class="split-arrows show">↓ &nbsp; &nbsp; &nbsp; &nbsp; ↓</div>
-            <div class="hex-result-row" id="hex-res-row">
-              <span class="hex-digit left">1</span>
-              <span class="hex-digit right">D</span>
-            </div>
-          </div>
-        `,
-        action: () => {
-          setTimeout(() => {
-            document.getElementById('bp-l').style.boxShadow = '0 0 10px rgba(79, 172, 254, 0.3)';
-            document.getElementById('bp-r').style.boxShadow = '0 0 10px rgba(0, 242, 254, 0.3)';
-          }, 100);
-          setTimeout(() => {
-            document.getElementById('hex-res-row').classList.add('show');
-          }, 600);
-        }
-      },
-      {
-        text: '<strong>変換結果を結合する</strong><br>それぞれの変換結果 <strong>1</strong> と <strong>D</strong> をそのまま並べて結合します。<br><strong>1D<sub>(16)</sub></strong> となります。<br>スライド資料に示されている通り、2進数 <strong>00011101<sub>(2)</sub></strong> は16進数で <strong>1D<sub>(16)</sub></strong> であることが確かめられました！',
-        render: () => `
-          <div class="split-bin-container">
-            <div class="hex-result-row show" style="gap: 1.5rem;">
-              <span class="hex-digit left" id="final-l">1</span>
-              <span class="hex-digit right" id="final-r">D</span>
-            </div>
-            <div class="hex-final" id="final-combine">1D<sub>(16)</sub></div>
-          </div>
-        `,
-        action: () => {
-          setTimeout(() => {
-            document.getElementById('final-l').style.transform = 'translateX(12px)';
-            document.getElementById('final-r').style.transform = 'translateX(-12px)';
-            document.getElementById('final-l').style.transition = 'all 0.5s ease';
-            document.getElementById('final-r').style.transition = 'all 0.5s ease';
-          }, 200);
-          setTimeout(() => {
-            document.getElementById('final-combine').classList.add('show');
-          }, 700);
-        }
       }
     ]
   };
