@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS Math Trainer | 情報I 計算トレーニング</title>
+  <meta name="description" content="高校の情報の授業向けに作られた、進数変換やデータ量などの計算を練習するためのWebアプリです。">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-container">
+    <!-- ヘッダー -->
+    <header>
+      <h1><span>CS</span> Math Trainer</h1>
+      <p class="subtitle">情報I デジタル計算トレーニング</p>
+    </header>
+
+    <!-- =============== 1. メニュー画面 =============== -->
+    <section id="menu-screen" class="screen active">
+      <div class="menu-section">
+        <h2 class="section-title">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6 1v3H3v2h3v3h2V6h3V4H8V1H6z"/><path d="M4 6.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-7zm1 .5v6h6V7H5z"/></svg>
+          トレーニングモード
+        </h2>
+        <div class="mode-grid">
+          <button class="card-btn selected" data-mode="bin-to-dec">
+            <span class="card-title">2進数 → 10進数</span>
+            <span class="card-desc">0と1の組み合わせから通常の数値へ変換します。</span>
+          </button>
+          <button class="card-btn" data-mode="dec-to-bin">
+            <span class="card-title">10進数 → 2進数</span>
+            <span class="card-desc">数値をビット表現(0と1)に分解して入力します。</span>
+          </button>
+          <button class="card-btn" data-mode="dec-to-hex">
+            <span class="card-title">10進数 → 16進数</span>
+            <span class="card-desc">数値を0〜9、A〜Fで表現される16進数に変換します。</span>
+          </button>
+          <button class="card-btn" data-mode="hex-to-dec">
+            <span class="card-title">16進数 → 10進数</span>
+            <span class="card-desc">16進数の値から通常の数値へ逆変換します。</span>
+          </button>
+          <button class="card-btn" data-mode="bin-to-hex">
+            <span class="card-title">2進数 → 16進数</span>
+            <span class="card-desc">0と1の組み合わせから16進数へ変換します。</span>
+          </button>
+          <button class="card-btn" data-mode="hex-to-bin">
+            <span class="card-title">16進数 → 2進数</span>
+            <span class="card-desc">16進数の値からビット表現(0と1)へ変換します。</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-section">
+        <h2 class="section-title">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2 6a6 6 0 1 1 10.174 4.31c-.203.196-.359.4-.453.619l-.762 1.769A.5.5 0 0 1 9.5 13h-3a.5.5 0 0 1-.46-.31l-.761-1.77c-.094-.217-.25-.422-.453-.618A5.984 5.984 0 0 1 2 6zm7 8.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1z"/></svg>
+          難易度
+        </h2>
+        <div class="difficulty-selector">
+          <button class="diff-btn" data-diff="easy">初級 (4-bit)</button>
+          <button class="diff-btn selected" data-diff="medium">中級 (8-bit)</button>
+          <button class="diff-btn" data-diff="hard">上級 (16-bit)</button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.8rem; margin-top: 2rem;">
+        <button id="start-btn" class="btn-primary" style="flex: 2; margin-top: 0;">トレーニング開始</button>
+        <button id="to-learn-btn" class="btn-secondary" style="flex: 1; margin-top: 0;">解説を見る</button>
+      </div>
+    </section>
+
+    <!-- =============== 2. プレイ画面 =============== -->
+    <section id="game-screen" class="screen">
+      <!-- ゲーム上部ステータス -->
+      <div class="game-header">
+        <div class="timer-container">
+          <div id="timer-bar" class="timer-bar"></div>
+        </div>
+        <div class="game-stats">
+          <div class="stat-badge">
+            <span class="stat-label">問題:</span>
+            <span id="question-progress" class="stat-value">1 / 10</span>
+          </div>
+          <div class="stat-badge">
+            <span class="stat-label">スコア:</span>
+            <span id="game-score" class="stat-value high">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 問題カード -->
+      <div id="question-card" class="question-card">
+        <div id="combo-display" class="combo-display">COMBO x0</div>
+        <span id="question-mode-label" class="question-meta">2進数 ➔ 10進数</span>
+        <span id="question-text" class="question-number">10110011</span>
+      </div>
+
+      <!-- 回答エリア -->
+      <div class="input-section">
+        <!-- ビットスイッチ (10進数→2進数で動的に表示) -->
+        <div id="bit-input-area" class="bit-switches" style="display: none;">
+          <!-- JSで動的にスイッチと重みを生成します -->
+        </div>
+
+        <!-- テキスト入力 -->
+        <div id="text-input-area" class="input-wrapper">
+          <input type="text" id="answer-input" class="text-input" placeholder="回答を入力..." autocomplete="off" spellcheck="false">
+        </div>
+
+        <!-- 操作ボタン -->
+        <div class="game-controls">
+          <button id="quit-btn" class="btn-secondary">終了</button>
+          <button id="submit-btn" class="btn-primary" style="margin-top: 0;">決定</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== 3. リザルト画面 =============== -->
+    <section id="result-screen" class="screen">
+      <div class="result-card">
+        <h2 class="section-title" style="text-align: center;">TRAINING COMPLETED</h2>
+        <div id="result-score" class="score-hero">1,250</div>
+        <p class="subtitle" id="result-rank">素晴らしい！ 進数マスターの素質があります。</p>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-item-label">正答率</span>
+            <span class="stat-item-value" id="result-accuracy">90%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item-label">最大コンボ</span>
+            <span class="stat-item-value" id="result-max-combo">5</span>
+          </div>
+        </div>
+
+        <!-- 復習セクション -->
+        <div class="review-section">
+          <h3 class="review-title">間違えた問題</h3>
+          <div id="review-list" class="review-list">
+            <!-- JSで動的に間違えた問題が追加されます -->
+          </div>
+        </div>
+
+        <button id="restart-btn" class="btn-primary">もう一度プレイ</button>
+        <button id="back-to-menu-btn" class="btn-secondary" style="width: 100%; margin-top: 0.8rem;">メニューに戻る</button>
+      </div>
+    </section>
+
+    <!-- =============== 4. 解説画面 =============== -->
+    <section id="learn-screen" class="screen">
+      <div class="learn-header">
+        <h2 class="section-title" style="margin-bottom: 0.5rem;">進数変換の解説</h2>
+        <!-- カテゴリタブ -->
+        <div class="learn-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; width: 100%;">
+          <button class="diff-btn active" data-tab="bin-dec" style="font-size: 0.85rem; padding: 0.6rem;">2進数 ⇔ 10進数</button>
+          <button class="diff-btn" data-tab="dec-hex" style="font-size: 0.85rem; padding: 0.6rem;">10進数 ⇔ 16進数</button>
+          <button class="diff-btn" data-tab="bin-hex" style="font-size: 0.85rem; padding: 0.6rem;">2進数 ⇔ 16進数</button>
+        </div>
+      </div>
+
+      <!-- 解説コンテンツ表示エリア -->
+      <div class="learn-body" style="margin-bottom: 1.5rem;">
+        <div id="tutorial-card" class="tutorial-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 1.8rem; min-height: 380px; position: relative;">
+          <!-- JSで動的に解説コンテンツとアニメーション要素を挿入 -->
+        </div>
+      </div>
+
+      <!-- 操作パネル -->
+      <div class="learn-footer">
+        <div class="learn-controls" style="display: flex; gap: 0.8rem; justify-content: space-between; align-items: center;">
+          <button id="learn-prev-btn" class="btn-secondary" style="flex: 1;">前へ</button>
+          <div id="step-indicators" style="display: flex; gap: 0.4rem; justify-content: center; flex: 1;">
+            <!-- JSでステップ数に応じたドットを生成 -->
+          </div>
+          <button id="learn-next-btn" class="btn-primary" style="flex: 1; margin-top: 0;">次へ</button>
+        </div>
+        <button id="learn-close-btn" class="btn-secondary" style="width: 100%; margin-top: 1rem;">メニューに戻る</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="generators.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
