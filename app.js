@@ -139,18 +139,39 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (currentCategory === 'bin-hex') pendingMode = 'bin-to-hex';
         else if (currentCategory === 'dec-hex') pendingMode = 'dec-to-hex';
         
-        // 設定モーダルを表示
-        settingsModal.classList.add('active');
+        openSettingsModal();
       } else if (action === 'play-b') {
         if (currentCategory === 'bin-dec') pendingMode = 'dec-to-bin';
         else if (currentCategory === 'bin-hex') pendingMode = 'hex-to-bin';
         else if (currentCategory === 'dec-hex') pendingMode = 'hex-to-dec';
         
-        // 設定モーダルを表示
-        settingsModal.classList.add('active');
+        openSettingsModal();
       }
     });
   });
+
+  // 設定モーダルの表示と内部状態の同期
+  function openSettingsModal() {
+    // 現在の難易度設定に合わせて選択状態を同期
+    modalDiffTabButtons.forEach(btn => {
+      if (btn.dataset.diff === currentDifficulty) {
+        btn.classList.add('selected');
+      } else {
+        btn.classList.remove('selected');
+      }
+    });
+
+    // 現在のゲームモード設定に合わせて選択状態を同期
+    modalModeButtons.forEach(btn => {
+      if (btn.dataset.mode === gameMode) {
+        btn.classList.add('selected');
+      } else {
+        btn.classList.remove('selected');
+      }
+    });
+
+    settingsModal.classList.add('active');
+  }
 
   // --- モーダル内の設定切り替えイベント ---
   modalDiffTabButtons.forEach(btn => {
