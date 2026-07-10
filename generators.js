@@ -127,8 +127,23 @@ const Generators = {
  * @returns {object} 生成された問題データ
  */
 function generateQuestion(mode, difficulty) {
-  if (Generators[mode]) {
-    return Generators[mode](difficulty);
+  let targetMode = mode;
+
+  // ミックスモードの振り分け
+  if (mode === 'bin-dec-mix') {
+    targetMode = Math.random() < 0.5 ? 'bin-to-dec' : 'dec-to-bin';
+  } else if (mode === 'bin-hex-mix') {
+    targetMode = Math.random() < 0.5 ? 'bin-to-hex' : 'hex-to-bin';
+  } else if (mode === 'dec-hex-mix') {
+    targetMode = Math.random() < 0.5 ? 'dec-to-hex' : 'hex-to-dec';
+  }
+
+  if (Generators[targetMode]) {
+    const question = Generators[targetMode](difficulty);
+    if (question) {
+      question.generatedMode = targetMode; // 実際に生成されたモードを保存
+    }
+    return question;
   }
   console.error(`Unknown mode: ${mode}`);
   return null;

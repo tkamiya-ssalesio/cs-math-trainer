@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const submenuTitle = document.getElementById('submenu-title');
   const playATitle = document.getElementById('play-a-title');
   const playBTitle = document.getElementById('play-b-title');
+  const playMixTitle = document.getElementById('play-mix-title');
   const submenuBackBtn = document.getElementById('submenu-back-btn');
   const submenuActionButtons = document.querySelectorAll('.submenu-action-btn');
 
@@ -97,14 +98,17 @@ document.addEventListener('DOMContentLoaded', () => {
         submenuTitle.textContent = '2進法 ⇔ 10進法';
         playATitle.textContent = '⚡️ 2進数 → 10進数';
         playBTitle.textContent = '⚡️ 10進数 → 2進数';
+        playMixTitle.textContent = '⚡️ 2進数 ⇔ 10進数ミックス';
       } else if (currentCategory === 'bin-hex') {
         submenuTitle.textContent = '2進法 ⇔ 16進法';
         playATitle.textContent = '⚡️ 2進数 → 16進数';
         playBTitle.textContent = '⚡️ 16進数 → 2進数';
+        playMixTitle.textContent = '⚡️ 2進数 ⇔ 16進数ミックス';
       } else if (currentCategory === 'dec-hex') {
         submenuTitle.textContent = '10進法 ⇔ 16進法';
         playATitle.textContent = '⚡️ 10進数 → 16進数';
         playBTitle.textContent = '⚡️ 16進数 → 10進数';
+        playMixTitle.textContent = '⚡️ 10進数 ⇔ 16進数ミックス';
       }
       
       showScreen('submenu');
@@ -145,6 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentCategory === 'bin-dec') pendingMode = 'dec-to-bin';
         else if (currentCategory === 'bin-hex') pendingMode = 'hex-to-bin';
         else if (currentCategory === 'dec-hex') pendingMode = 'hex-to-dec';
+        
+        openSettingsModal();
+      } else if (action === 'play-mix') {
+        if (currentCategory === 'bin-dec') pendingMode = 'bin-dec-mix';
+        else if (currentCategory === 'bin-hex') pendingMode = 'bin-hex-mix';
+        else if (currentCategory === 'dec-hex') pendingMode = 'dec-hex-mix';
         
         openSettingsModal();
       }
@@ -279,14 +289,15 @@ document.addEventListener('DOMContentLoaded', () => {
       answerInput.readOnly = false;
       
       // スマホなどで開くキーボードの最適化
-      if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
+      const activeMode = currentQuestion.generatedMode || currentMode;
+      if (activeMode === 'dec-to-hex' || activeMode === 'bin-to-hex') {
         answerInput.setAttribute('inputmode', 'text');
         binaryInputTip.style.display = 'none';
       } else {
         answerInput.setAttribute('inputmode', 'numeric');
         
         // 2進数のテキスト入力時のヒントとカウンタ制御
-        if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+        if (activeMode === 'dec-to-bin' || activeMode === 'hex-to-bin') {
           requiredLength = currentDifficulty === 'easy' ? 4 : (currentDifficulty === 'medium' ? 8 : 16);
           binaryInputTip.style.display = 'flex';
           charCounter.textContent = `0 / ${requiredLength} 文字`;
@@ -416,13 +427,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // モードごとの入力制御
-    if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+    const activeMode = (currentQuestion && currentQuestion.generatedMode) ? currentQuestion.generatedMode : currentMode;
+    if (activeMode === 'dec-to-bin' || activeMode === 'hex-to-bin') {
       // 2進数入力: 0と1のみ
       value = value.replace(/[^01]/g, '');
-    } else if (currentMode === 'bin-to-dec' || currentMode === 'hex-to-dec') {
+    } else if (activeMode === 'bin-to-dec' || activeMode === 'hex-to-dec') {
       // 10進数入力: 0-9のみ
       value = value.replace(/[^0-9]/g, '');
-    } else if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
+    } else if (activeMode === 'dec-to-hex' || activeMode === 'bin-to-hex') {
       // 16進数入力: 0-9, a-f, A-F のみ。かつ大文字に自動変換
       value = value.replace(/[^0-9a-fA-F]/g, '');
       value = value.toUpperCase();
@@ -431,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     answerInput.value = value;
 
     // 2進数入力時の文字数カウンタ連動
-    if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+    if (activeMode === 'dec-to-bin' || activeMode === 'hex-to-bin') {
       charCounter.textContent = `${value.length} / ${requiredLength} 文字`;
       if (value.length === requiredLength) {
         charCounter.className = 'char-counter match';
@@ -458,7 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const correctAnswer = currentQuestion.answer;
     let isCorrect = false;
 
-    if (currentMode === 'dec-to-hex' || currentMode === 'bin-to-hex') {
+    const activeMode = currentQuestion.generatedMode || currentMode;
+    if (activeMode === 'dec-to-hex' || activeMode === 'bin-to-hex') {
       isCorrect = userAnswer.toUpperCase() === correctAnswer.toUpperCase();
     } else {
       isCorrect = userAnswer === correctAnswer;
@@ -556,7 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           // テキスト入力の場合は間違えた値をクリアしてフォーカス
           answerInput.value = '';
-          if (currentMode === 'dec-to-bin' || currentMode === 'hex-to-bin') {
+          const activeMode = currentQuestion.generatedMode || currentMode;
+          if (activeMode === 'dec-to-bin' || activeMode === 'hex-to-bin') {
             charCounter.textContent = `0 / ${requiredLength} 文字`;
             charCounter.className = 'char-counter error';
           }
