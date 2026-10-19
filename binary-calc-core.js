@@ -451,9 +451,11 @@ var BinCalcCore = (function () {
      行ごとに「入力の向き」dir を持つ．
        rtl（既定）：1 文字ずつ打つと，フォーカスのマス（最初は右端）に入って左へ進む（下の桁から上の桁へ，筆算の順）．
        ltr        ：2 文字以上が一度に来た（IME の確定・insertText）あと．読む順（左から右）に続ける．
-     2 文字以上が一度に来たら，右へ読む順に配り，向きを ltr にする．開始位置は，向きが ltr（直前にこの行でまとめて入力を受けた）で
-     フォーカスのマス以降に空きがあるときだけフォーカスのマス（4 桁ずつ 2 回に分けて確定しても続けて入る），それ以外はすべて行の左端
-     （既にあるマスは上書き．行が埋まっていても，答え合わせのあとでも，打ち直した行全体が置き換わる）．
+     2 文字以上が一度に来たら，右へ読む順に配り，向きを ltr にする．開始位置（上から順に当てはめる）：
+       ① まとめて来た 0・1 の数が行のマス数以上 → 向き・空き・フォーカスによらず，常に左端（行全体が置き換わる）
+       ② マス数未満で，向きが ltr（直前にこの行でまとめて入力を受けた）かつフォーカスのマス以降に空きがある → フォーカスのマス（4 桁ずつ 2 回に分けて確定しても続けて入る）
+       ③ それ以外 → 左端（既にあるマスは上書き）
+     空きを残して答え合わせ（Enter でもボタンでも同じ check()）して断られたときは，向きを rtl・フォーカスを右端から見て最初の空きに直す（emptyRefusal）．
      ltr の間は 1 文字入力も右へ進む（行末で止まる）．Backspace は左へ戻って消す．
      rtl に戻るとき：Backspace／Delete で行が空になる（フォーカスは右端へ）・Home／End・クリック（ev.type "focus"）．
      段が変わる・答え合わせのあと誤りのマスへ戻るときは，呼び出し側が dir を "rtl" にして渡す ---- */
@@ -477,9 +479,9 @@ var BinCalcCore = (function () {
         if (dir === "ltr") { if (f < len - 1) f++; }
         else if (f > 0) f--;
       }
-      else {                                                      // 2 文字以上が一度に来たとき：読む順に右へ配る．ltr でフォーカス以降に空きがあるときだけフォーカスのマスから，それ以外は左端から
-        start = 0;
-        if (dir === "ltr") for (i = f; i < len; i++) if (cells[i] === "") { start = f; break; }
+      else {                                                      // 2 文字以上が一度に来たとき：読む順に右へ配る．行のマス数以上なら常に左端から．未満で ltr かつフォーカス以降に空きがあるときだけフォーカスのマスから，それ以外は左端から
+        start = 0;                                                // ① 行のマス数以上なら常に左端（状態によらない）
+        if (m.length < len && dir === "ltr") for (i = f; i < len; i++) if (cells[i] === "") { start = f; break; }   // ② マス数未満で ltr かつフォーカス以降に空きがあるときだけフォーカスから
         for (i = 0; i < m.length && start + i < len; i++) cells[start + i] = m.charAt(i);
         if (start + m.length > len) r.note = TEXT.msg.overflow;   // 行の長さを超える分は捨てて知らせる
         f = Math.min(start + m.length, len - 1);                  // 続きを打つマス：配ったすぐ右（全部埋まったら右端）
@@ -499,13 +501,16 @@ var BinCalcCore = (function () {
       else if (e === "ArrowRight") { f = clamp(f + 1); }
       else if (e === "Home") { f = 0; dir = "rtl"; }
       else if (e === "End") { f = len - 1; dir = "rtl"; }
-      else if (e === "Enter") {
-        empty = 0; for (i = 0; i < len; i++) if (cells[i] === "") empty++;
-        if (empty > 0) { r.msg = msgEmpty(empty); r.counted = false; } else r.submit = true;
-      }
+      else if (e === "Enter") { r.submit = true; }                // 答え合わせの依頼．空きがあるかどうかは画面の check()（「答え合わせ」ボタンと同じ関数）が判定する
     }
     r.focus = f; r.dir = dir;
     return r;
+  }
+  function emptyRefusal(cells) {                                       // 空きを残した答え合わせが断られたあとの状態（Enter も「答え合わせ」ボタンも check() 経由でここを使う）
+    var i, k = 0, last = cells.length - 1;
+    for (i = cells.length - 1; i >= 0; i--) if (cells[i] === "") { last = i; break; }
+    for (i = 0; i < cells.length; i++) if (cells[i] === "") k++;
+    return { empty: k, focus: last, dir: "rtl" };                      // 向きは rtl（既定）・フォーカスは右端から見て最初の空き
   }
   function cellLabel(rowName, digitFromRight, value) {                 // 画面読み上げ用（aria-label）
     return "右から" + digitFromRight + "桁目の" + rowName + " " + (value === "" ? "未入力" : value);
@@ -958,7 +963,7 @@ var BinCalcCore = (function () {
         q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: "ArrowLeft" }); check(q.dir === "ltr" && q.focus === 1, "← は向きを変えない");
         q = nx(st(["1", "0", "", ""], 1, "ltr"), { type: "key", key: "ArrowRight" }); check(q.dir === "ltr" && q.focus === 2, "→ は向きを変えない");
         // Enter・貼り付け・捨てる入力では向きを変えない
-        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: "Enter" }); check(q.dir === "ltr", "Enter（空きあり）は向きを変えない");
+        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: "Enter" }); check(q.dir === "ltr", "Enter 自体（cellEdit）は向きを変えない．空きがあって断られたときの向きは check() が emptyRefusal で直す");
         q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "input", value: "9" }); check(q.dir === "ltr" && q.rejected, "捨てる入力は向きを変えない");
         // 繰り上がり行（n−1 マス）・和の行（n+1 マス）でも同じ規則
         q = nx(st(["", "", ""], 2, "rtl"), { type: "input", value: "10" }); check(q.cells.join("|") === "1|0|" && q.focus === 2 && q.dir === "ltr", "繰り上がりの行（3 マス）：まとめて入力");
@@ -994,6 +999,108 @@ var BinCalcCore = (function () {
           q = nx(st(["1", "0", "", "", "", "", "", ""], 2, "ltr"), { type: "input", value: "11" }); check(q.cells.join("|") === "1|0|1|1||||" && q.focus === 4, "ltr・空きあり：フォーカスのマスから続く");
           q = nx(st(["1", "0", "1", "1", "0", "0", "1", "1"], 3, "ltr"), { type: "input", value: "00" }); check(q.cells.join("") === "00110011" && q.focus === 2, "ltr・以降に空きなし：左端から置き換え");
         })();
+        // Major-3（qa-scizor 3周目）：まとめて来た 0・1 の数が行のマス数以上なら，向き・空き・フォーカスによらず常に左端から．
+        //   未満のときだけ「ltr かつフォーカス以降に空き → フォーカスから，それ以外は左端から」．独立なモデル（仕様の文から書いた）と全数で比べる
+        (function () {
+          function model(cells, focus, dir, m) {                                 // 仕様の文をそのまま書いた別実装（文字列の操作）
+            var L = cells.length, from = (m.length >= L) ? 0 : ((dir === "ltr" && cells.slice(focus).join("").length < L - focus) ? focus : 0);
+            var head = cells.slice(0, from), put = m.slice(0, L - from).split(""), tail = cells.slice(from + put.length);
+            return { cells: head.concat(put, tail), focus: Math.min(from + m.length, L - 1), note: from + m.length > L };
+          }
+          function mk(L, code) { var a = [], k; for (k = 0; k < L; k++) { a.push(["", "0", "1"][code % 3]); code = Math.floor(code / 3); } return a; }
+          function bulkOf(n, v) { var b = "", k; for (k = 0; k < n; k++) b += ((v >> (k % 20)) & 1) ^ (k % 2) ? "1" : "0"; return b; }
+          var Ls = [3, 4, 5, 6, 8, 9, 10], li, L, total, c, f, d, n, v, cells, rr, mm, want, bad = 0, cnt = 0, ex = "", rng2 = makeRng(20261019 + 3), full = [3, 4, 5, 6];
+          for (li = 0; li < Ls.length; li++) {
+            L = Ls[li]; total = Math.pow(3, L);
+            for (c = 0; c < total; c++) {
+              if (full.indexOf(L) < 0 && rng2() > 3000 / total) continue;       // 3〜6 マスは全数．8・9・10 マスは標本（各 約 3000 状態）
+              cells = mk(L, c);
+              for (f = 0; f < L; f++) for (d = 0; d < 2; d++) for (n = 2; n <= L + 1; n++) {
+                v = Math.floor(rng2() * 1048576);
+                mm = bulkOf(n, v); mm = (mm.indexOf("1") < 0 || mm.indexOf("0") < 0) ? ("1" + mm.slice(1)) : mm;
+                rr = cellEdit({ cells: cells, focus: f, dir: d ? "ltr" : "rtl" }, { type: "input", value: mm });
+                want = model(cells, f, d ? "ltr" : "rtl", mm); cnt++;
+                if (rr.cells.join("|") !== want.cells.join("|") || rr.focus !== want.focus || (rr.note !== "") !== want.note || rr.dir !== "ltr") {
+                  bad++; if (!ex) ex = L + " マス " + cells.join("|") + " f" + f + (d ? " ltr " : " rtl ") + mm + " → " + rr.cells.join("|") + " 期待 " + want.cells.join("|");
+                }
+              }
+            }
+          }
+          rep.totalChecked++; check(bad === 0 && cnt > 100000, "まとめて入力：独立モデルと一致（" + cnt + " 通り．ずれ " + bad + "）" + ex);
+          rep.extra.bulkModel = { cases: cnt, mismatch: bad };
+        })();
+        // Major-3：境界（一括の長さ＝マス数−1／ちょうど／+1）×向き×フォーカス．行のマス数以上は常に左端から全体を置き換える
+        (function () {
+          var Ls = [3, 4, 5, 8, 9], li, L, right, f, d, dd, mm, start, k, bad = 0, ex = "";
+          for (li = 0; li < Ls.length; li++) {
+            L = Ls[li]; right = ""; for (k = 0; k < L; k++) right += (k % 3 === 1 ? "0" : "1");
+            for (f = 0; f < L; f++) for (d = 0; d < 2; d++) {
+              dd = d ? "ltr" : "rtl";
+              // ちょうど L 桁：どんな行（空・途中まで・埋まり）でも全体が置き換わる
+              [new Array(L + 1).join("").split(""), right.split("").map(function (x, i) { return i < f ? "" : (x === "1" ? "0" : "1"); }), right.split("").map(function (x) { return x === "1" ? "0" : "1"; })].forEach(function (cl, ci) {
+                var cc = cl.length === L ? cl : right.split("").map(function () { return ""; });
+                q = nx(st(cc, f, dd), { type: "input", value: right });
+                if (q.cells.join("") !== right || q.note !== "") { bad++; ex = ex || ("ちょうど " + L + " 桁 " + dd + " f" + f + " 行" + ci + " → " + q.cells.join("|")); }
+                q = nx(st(cc, f, dd), { type: "input", value: right.replace(/0/g, "０").replace(/1/g, "１") });
+                if (q.cells.join("") !== right) { bad++; ex = ex || ("全角 " + L); }
+              });
+              // L+1 桁（超過）：左端から L 桁が入り，超えた分は捨てて知らせる
+              q = nx(st(right.split("").map(function () { return ""; }), f, dd), { type: "input", value: right + "1" });
+              if (q.cells.join("") !== right || q.note !== TEXT.msg.overflow) { bad++; ex = ex || ("超過 " + L + " " + dd + " f" + f); }
+              q = nx(st(right.split("").map(function (x) { return x === "1" ? "0" : "1"; }), f, dd), { type: "input", value: right + "10" });
+              if (q.cells.join("") !== right || q.note !== TEXT.msg.overflow) { bad++; ex = ex || ("超過・埋まり " + L + " " + dd + " f" + f); }
+            }
+          }
+          rep.totalChecked++; check(bad === 0, "一括の長さ＝マス数・マス数+1 は，向き・フォーカス・埋まり具合によらず左端から全体を置き換える " + ex);
+        })();
+        // Major-3 (a)：空きを残して答え合わせ（Enter／ボタン）→全桁を一括→正解．4・8 ビットの補数を求める（n マス）・繰り上がり行（n−1）・足し算の答え（n）・③の和（n+1）
+        (function () {
+          function check1(row, route) {                                       // 答え合わせ：route が "enter" なら cellEdit の Enter を通してから，"button" なら直接 check()．どちらも空きがあれば emptyRefusal
+            var x = row, e0;
+            if (route === "enter") { e0 = cellEdit(row, { type: "key", key: "Enter" }); if (!e0.submit) return { row: row, bad: true }; x = { cells: e0.cells, focus: e0.focus, dir: e0.dir }; }
+            var rf = emptyRefusal(x.cells);
+            if (rf.empty === 0) return { row: x, accepted: true };
+            return { row: { cells: x.cells.slice(), focus: rf.focus, dir: rf.dir }, accepted: false };
+          }
+          var Ls = [3, 4, 5, 7, 8, 9], routes = ["enter", "button"], li, ri, L, right, drop, z, base, same = 0, bad = 0, ex = "", res, k, dg, ev2;
+          for (li = 0; li < Ls.length; li++) {
+            L = Ls[li]; right = ""; for (k = 0; k < L; k++) right += (k % 3 === 1 ? "0" : "1");
+            for (drop = 1; drop < L; drop++) {                                    // 先に (L−drop) 桁をまとめて入れて，空きを drop 個残す（模範の先頭から）
+              for (ri = 0; ri < routes.length; ri++) {
+                base = nx(st(right.split("").map(function () { return ""; }), L - 1, "rtl"), { type: "input", value: right.slice(0, L - drop) });
+                res = check1({ cells: base.cells, focus: base.focus, dir: base.dir }, routes[ri]);
+                if (res.accepted) { bad++; ex = ex || ("空きがあるのに受け付けた " + L); continue; }
+                ev2 = nx(res.row, { type: "input", value: right });
+                if (ev2.cells.join("") !== right || ev2.note !== "") { bad++; ex = ex || ("(a) " + routes[ri] + " " + L + " マス 空き" + drop + " → " + ev2.cells.join("|")); }
+                res = check1({ cells: ev2.cells, focus: ev2.focus, dir: ev2.dir }, routes[ri]);
+                if (!res.accepted) { bad++; ex = ex || ("全桁のあと答え合わせが受け付けられない " + L); }
+                same++;
+              }
+              // Enter とボタンは同じ状態から同じ結果
+              base = nx(st(right.split("").map(function () { return ""; }), L - 1, "rtl"), { type: "input", value: right.slice(0, L - drop) });
+              var ra = check1({ cells: base.cells, focus: base.focus, dir: base.dir }, "enter"), rb = check1({ cells: base.cells, focus: base.focus, dir: base.dir }, "button");
+              if (JSON.stringify(ra.row) !== JSON.stringify(rb.row)) { bad++; ex = ex || ("Enter とボタンの結果が違う " + L); }
+            }
+          }
+          rep.totalChecked++; check(bad === 0 && same > 50, "(a) 空きを残して Enter／ボタン→全桁を一括→正解（4・8 ビットの各行．Enter とボタンは同じ結果）" + ex);
+          // (b) 途中まで一括→全桁を一括（Enter なし）．8 ビットで 1011→10110010，各 k 桁→全桁
+          for (li = 0; li < Ls.length; li++) {
+            L = Ls[li]; right = ""; for (k = 0; k < L; k++) right += (k % 3 === 1 ? "0" : "1");
+            for (k = 2; k < L; k++) {
+              q = nx(st(right.split("").map(function () { return ""; }), L - 1, "rtl"), { type: "input", value: bulkStr(k) });
+              q = nx(q, { type: "input", value: right });
+              if (q.cells.join("") !== right) { bad++; ex = ex || ("(b) " + L + " マス " + k + " 桁のあと全桁"); }
+            }
+          }
+          function bulkStr(n) { var b = "", k2; for (k2 = 0; k2 < n; k2++) b += (k2 % 2 ? "0" : "1"); return b; }
+          q = nx(st(["", "", "", "", "", "", "", ""], 7, "rtl"), { type: "input", value: "1011" }); q = nx(q, { type: "input", value: "10110010" });
+          check(q.cells.join("") === "10110010" && q.note === "", "(b) 8 ビットの行に 1011 を入れてから 10110010 を一括で入れる→そのまま 10110010（フォーカスの 4 から配られない）");
+          rep.totalChecked++; check(bad === 0, "(b) 途中まで一括→全桁を一括は全体が置き換わる " + ex);
+          // 1 文字ずつ・Backspace の戻りは変わらない（全桁を 1 文字ずつ打つと右端から左へ，左へ戻って消す）
+          q = st(["", "", "", ""], 3, "rtl"); "1011".split("").forEach(function (ch) { q = nx(q, { type: "input", value: ch }); });
+          check(q.cells.join("") === "1101" && q.focus === 0 && q.dir === "rtl", "1 文字ずつ（4 マス）：右端から左へ入る");
+          q = nx(st(["1", "0", "1", ""], 3, "ltr"), { type: "key", key: "Backspace" }); check(q.cells.join("|") === "1|0||" && q.focus === 2, "ltr の Backspace：左のマスへ戻って消す（変わらない）"); q = nx(q, { type: "key", key: "Backspace" }); check(q.cells.join("|") === "1|||" && q.focus === 1, "ltr の Backspace を続ける（変わらない）");
+        })();
         // 純粋性：向きを含めて入力の row を書き換えない
         var rr0 = st(["", "", "", ""], 3, "ltr"); cellEdit(rr0, { type: "input", value: "11" }); check(rr0.cells.join("") === "" && rr0.focus === 3 && rr0.dir === "ltr", "row（向きを含む）を書き換えない");
       })();
@@ -1008,7 +1115,9 @@ var BinCalcCore = (function () {
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "Home" }); check(r.focus === 0, "Home");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "End" }); check(r.focus === 3, "End");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "ArrowUp" }); check(r.focus === 1 && r.cells.join("") === "1011", "↑は使わない");
-      r = cellEdit({ cells: ["1", "", "1", "1"], focus: 1 }, { type: "key", key: "Enter" }); check(!r.submit && r.msg === msgEmpty(1) && !r.counted, "空があれば答え合わせしない");
+      r = cellEdit({ cells: ["1", "", "1", "1"], focus: 1 }, { type: "key", key: "Enter" }); check(r.submit && r.msg === "" && r.counted, "Enter は答え合わせの依頼（空きがあるかどうかは check()＝ボタンと同じ関数が判定する）");
+      r = emptyRefusal(["1", "", "1", ""]); check(r.empty === 2 && r.focus === 3 && r.dir === "rtl", "空きを断られたあと：rtl・右端から見て最初の空き");
+      r = emptyRefusal(["1", "", "1", "1"]); check(r.empty === 1 && r.focus === 1 && r.dir === "rtl", "空きが 1 つ");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "Enter" }); check(r.submit, "Enter＝答え合わせ（どのマスでも）");
       r = cellEdit({ cells: ["", "", "", ""], focus: 2 }, { type: "paste" }); check(r.rejected && r.cells.join("") === "", "貼り付けは受けない");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "0" }); check(r.cells.join("") === "1011", "keydown の 0/1 では変えない（input で正規化）");
@@ -1190,7 +1299,7 @@ var BinCalcCore = (function () {
     BANNED_ALL: BANNED_ALL, BANNED_SCREEN: BANNED_SCREEN, DEF_ONLY_TERMS: DEF_ONLY_TERMS, BANNED_BORROW: BANNED_BORROW, TEXT: TEXT, HINTS: HINTS, FIXTURES: FIXTURES, EXPECTED_POOLS: EXPECTED_POOLS,
     setSeed: setSeed, gen: gen, makeProblem: makeProblem, problemOfFixture: problemOfFixture, stagesOf: stagesOf, verifyOf: verifyOf, decimalText: decimalText, titleOf: titleOf,
     judgeStage: judgeStage, diagnose: diagnose, describeWrong: describeWrong, newStageState: newStageState, advance: advance, attempt: attempt,
-    problemSummary: problemSummary, summaryText: summaryText, cellEdit: cellEdit, cellLabel: cellLabel,
+    problemSummary: problemSummary, summaryText: summaryText, cellEdit: cellEdit, emptyRefusal: emptyRefusal, cellLabel: cellLabel,
     newRec: newRec, normalizeRec: normalizeRec, loadRec: loadRec, saveRec: saveRec, clearRec: clearRec, recStart: recStart, recAbandon: recAbandon, recFinish: recFinish,
     tickOf: tickOf, weakestStage: weakestStage, comboKey: comboKey, setExcludePaper: setExcludePaper, poolSizes: poolSizes, checkTexts: checkTexts, staticTexts: staticTexts,
     selfTest: selfTest

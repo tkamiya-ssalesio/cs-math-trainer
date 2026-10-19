@@ -357,7 +357,6 @@
   }
 
   /* ---- 答え合わせ・段の進行 ---- */
-  function lastEmptyFromRight() { for (var i = S.cells.length - 1; i >= 0; i--) if (S.cells[i] === "") return i; return S.cells.length - 1; }
   function check() {
     var st, o;
     if (!S) return;
@@ -367,7 +366,8 @@
     $("bc-cellmsg").textContent = "";
     if (!o.counted) {                                                         // 空のマスがある：試行に数えない
       showFeedback("retry", o.head);
-      S.focus = lastEmptyFromRight(); S.dir = "rtl"; refreshRows(); focusCell(S.focus);
+      var rf = C.emptyRefusal(S.cells);                                       // Enter も「答え合わせ」ボタンも，ここで同じ状態（rtl・右端から見て最初の空き）に直す
+      S.focus = rf.focus; S.dir = rf.dir; refreshRows(); focusCell(S.focus);
       return;
     }
     S.sst[S.idx] = o.st;
