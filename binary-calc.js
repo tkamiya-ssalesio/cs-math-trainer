@@ -20,7 +20,7 @@
   function show(id) {
     var all = document.querySelectorAll(".screen"), i, app = document.querySelector(".app-container");
     for (i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
-    if (app) app.classList.toggle("bc-compact", id === "bc-play-screen");
+    if (app) { app.classList.toggle("bc-compact", id === "bc-play-screen"); app.classList.toggle("bc-learn", id === "bc-learn-screen"); }
     try { window.scrollTo(0, 0); } catch (e) { }
   }
 
@@ -737,7 +737,16 @@
     (function () {
       var i, n = T.learn.steps.length;
       show("bc-learn-screen");
-      for (i = 0; i < n; i++) { learnIdx = i; renderLearn(); audit1("解説 " + (i + 1)); }
+      for (i = 0; i < n; i++) {
+        learnIdx = i; renderLearn(); audit1("解説 " + (i + 1));
+        (function () {                                    // 解説：1280×768 以上の画面で，どのステップもスクロールなしに収まり，「次へ」「メニューに戻る」が見える
+          var L = out.layout, h = document.documentElement.scrollHeight, nb = $("bc-learn-next").getBoundingClientRect().bottom, cb = $("bc-learn-close").getBoundingClientRect().bottom;
+          L.learnSteps = (L.learnSteps || 0) + 1; L.learnMaxClose = Math.max(L.learnMaxClose || 0, cb);
+          if (h > innerHeight) L.learnTaller = (L.learnTaller || 0) + 1;
+          out.checked++;
+          if (innerWidth >= 1280 && innerHeight >= 768 && (h > innerHeight || nb > innerHeight || cb > innerHeight)) fail("解説 " + (i + 1) + "：スクロールが出る（文書の高さ " + h + "／窓 " + innerHeight + "）");
+        })();
+      }
       out.checked++; if ($("bc-learn-screen").querySelector(".tutorial-visual .bc-vc") === null) fail("解説の絵が出ていない");
       learnIdx = 0;
     })();

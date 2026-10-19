@@ -7,9 +7,11 @@
 
 /* ---- 練習画面だけ，枠を広げてヘッダーを小さくする（ほかの画面は今までどおり） ---- */
 .app-container.bc-compact { max-width: 1100px; width: 96%; padding: 1.1rem 1.25rem 1.25rem; }
-.app-container.bc-compact > header { margin-bottom: 0.6rem; text-align: left; display: flex; align-items: baseline; gap: 0.8rem; }
-.app-container.bc-compact > header h1 { font-size: 1.15rem; letter-spacing: 0.5px; }
-.app-container.bc-compact > header .subtitle { display: none; }
+.app-container.bc-compact > header, .app-container.bc-learn > header { margin-bottom: 0.6rem; text-align: left; display: flex; align-items: baseline; gap: 0.8rem; }
+.app-container.bc-compact > header h1, .app-container.bc-learn > header h1 { font-size: 1.15rem; letter-spacing: 0.5px; }
+.app-container.bc-compact > header .subtitle, .app-container.bc-learn > header .subtitle { display: none; }
+/* 解説画面：ヘッダーを小さくして，どのステップも 1366×768・1280×800 でスクロールなしに収める */
+.app-container.bc-learn { padding: 1.1rem 2rem 1.2rem; }
 
 .bc-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .bc-note { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.6rem; line-height: 1.6; }
@@ -128,8 +130,16 @@ input.bc-cell.bc-in { caret-color: transparent; }
 .bc-selftest { background: #000; color: #8f8; border-radius: 10px; padding: 0.75rem; overflow-x: auto; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-top: 0.8rem; }
 
 /* ---- 解説 ---- */
-.bc-learn-h { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.6rem; }
-.bc-learn-p { margin-bottom: 0.5rem; }
+.bc-learn-screen-title { margin-bottom: 0.4rem; }
+.bc-learn-body { margin-bottom: 0.8rem; }
+.bc-learn-close { width: 100%; margin-top: 0.6rem; }
+.bc-tutorial { position: relative; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 1.1rem 1.5rem; min-height: 25.3rem; }
+.bc-tutorial .tutorial-text { margin-bottom: 0.7rem; line-height: 1.6; }
+.bc-tutorial .tutorial-visual { min-height: 0; padding: 0.7rem 1rem; }
+.bc-tutorial .bc-vis { gap: 0.25rem; }
+.bc-tutorial .bc-vc { width: 1.95rem; height: 2.25rem; font-size: 1.4rem; }
+.bc-learn-h { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.4rem; }
+.bc-learn-p { margin-bottom: 0.3rem; }
 .bc-vis { display: grid; gap: 0.35rem; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; max-width: 100%; }
 .bc-vrow { display: grid; grid-template-columns: 7.5rem 1.4rem max-content minmax(0, auto); align-items: center; column-gap: 0.5rem; }
 .bc-vlab { font-family: var(--font-main); font-size: 0.8rem; color: var(--text-secondary); text-align: right; line-height: 1.2; }
@@ -165,6 +175,6 @@ input.bc-cell.bc-in { caret-color: transparent; }
   .bc-bitsw { margin-left: 0; }
   .bc-vrow { grid-template-columns: 1.4rem max-content minmax(0, auto); row-gap: 0.1rem; }
   .bc-vlab { grid-column: 1 / -1; text-align: left; }
-  .bc-vc { width: 1.7rem; height: 2.1rem; font-size: 1.2rem; }
+  .bc-vc, .bc-tutorial .bc-vc { width: 1.7rem; height: 2.1rem; font-size: 1.2rem; }
 }
 @media (prefers-reduced-motion: reduce) { .bc-fade { animation: none; } }
