@@ -6,6 +6,7 @@
   <title>CS Math Trainer | 情報I 計算トレーニング</title>
   <meta name="description" content="高校の情報の授業向けに作られた、進数変換やデータ量などの計算を練習するためのWebアプリです。">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="binary-calc.css">
 </head>
 <body>
   <main class="app-container">
@@ -34,6 +35,11 @@
           <button class="card-btn category-select-btn" data-category="dec-hex">
             <span class="card-title">10進法 ⇔ 16進法</span>
             <span class="card-desc">16で割るすだれ算や、各桁 of 重み（16の累乗）を用いた16進数から10進数への戻し方を学習します。</span>
+          </button>
+          <!-- 4つ目のカテゴリ：2進数の計算（足し算・補数）．画面は binary-calc.js が受け持つ（category-select-btn ではない） -->
+          <button class="card-btn" id="bc-open-btn" data-category="bin-calc">
+            <span class="card-title" id="bc-open-title">2進数の計算（足し算・補数）</span>
+            <span class="card-desc" id="bc-open-desc">2進数の足し算の筆算と，補数を使った引き算を，1段ずつ入力して練習します．時間制限はありません．</span>
           </button>
         </div>
       </div>
@@ -183,7 +189,100 @@
         <button id="learn-close-btn" class="btn-secondary" style="width: 100%; margin-top: 1rem;">メニューに戻る</button>
       </div>
     </section>
+
+    <!-- =============== 6. 2進数の計算（足し算・補数）: サブメニュー =============== -->
+    <section id="bc-submenu-screen" class="screen">
+      <h2 class="section-title" id="bc-submenu-title" style="margin-bottom: 1.5rem; text-align: center; color: var(--accent-cyan); font-size: 1.5rem;">2進数の計算（足し算・補数）</h2>
+
+      <div class="menu-section">
+        <h3 class="section-title" id="bc-level-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">難易度の選択</h3>
+        <div class="bc-diffsel" id="bc-diff" role="group" aria-label="難易度"></div>
+        <p class="bc-note" id="bc-level-note"></p>
+      </div>
+
+      <div class="menu-section">
+        <h3 class="section-title" id="bc-action-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">学習アクションの選択</h3>
+        <div class="mode-grid" style="grid-template-columns: 1fr; gap: 1rem;">
+          <button class="card-btn bc-action-btn" data-action="learn" style="border-color: rgba(79, 172, 254, 0.15);">
+            <span class="card-title" id="bc-learn-title" style="color: var(--accent-blue);">📘 解説</span>
+            <span class="card-desc" id="bc-learn-desc"></span>
+          </button>
+          <button class="card-btn bc-action-btn" data-action="calc" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="bc-kind-title-calc" style="color: var(--accent-green);"></span>
+            <span class="card-desc" id="bc-kind-desc-calc"></span>
+            <span class="bc-ticks" data-kind="calc"></span>
+          </button>
+          <button class="card-btn bc-action-btn" data-action="comp" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="bc-kind-title-comp" style="color: var(--accent-green);"></span>
+            <span class="card-desc" id="bc-kind-desc-comp"></span>
+            <span class="bc-ticks" data-kind="comp"></span>
+          </button>
+          <button class="card-btn bc-action-btn" data-action="viacomp" style="border-color: rgba(255, 0, 128, 0.15);">
+            <span class="card-title" id="bc-kind-title-viacomp" style="color: #ff3366;"></span>
+            <span class="card-desc" id="bc-kind-desc-viacomp"></span>
+            <span class="bc-ticks" data-kind="viacomp"></span>
+          </button>
+        </div>
+      </div>
+
+      <button id="bc-submenu-back-btn" class="btn-secondary" style="width: 100%; margin-top: 2rem;">カテゴリ選択に戻る</button>
+    </section>
+
+    <!-- =============== 7. 2進数の計算: 解説 =============== -->
+    <section id="bc-learn-screen" class="screen">
+      <div class="learn-header">
+        <h2 class="section-title bc-learn-screen-title" id="bc-learn-screen-title">2進数の計算の解説</h2>
+      </div>
+      <div class="learn-body bc-learn-body">
+        <div id="bc-tutorial-card" class="tutorial-card bc-tutorial"></div>
+      </div>
+      <div class="learn-footer">
+        <div class="learn-controls" style="display: flex; gap: 0.8rem; justify-content: space-between; align-items: center;">
+          <button id="bc-learn-prev" class="btn-secondary" style="flex: 1;">前へ</button>
+          <div id="bc-step-indicators" style="display: flex; gap: 0.4rem; justify-content: center; flex: 1;"></div>
+          <button id="bc-learn-next" class="btn-primary" style="flex: 1; margin-top: 0;">次へ</button>
+        </div>
+        <button id="bc-learn-close" class="btn-secondary bc-learn-close">メニューに戻る</button>
+      </div>
+    </section>
+
+    <!-- =============== 8. 2進数の計算: 練習（1段ずつ入力．時間制限なし） =============== -->
+    <section id="bc-play-screen" class="screen">
+      <div class="bc-topbar">
+        <button type="button" class="bc-linkbtn" id="bc-back-btn">← 戻る</button>
+        <div class="bc-kinds" id="bc-kinds" role="group" aria-label="種類"></div>
+        <div class="bc-bitsw" id="bc-bitsw" role="group" aria-label="難易度"></div>
+      </div>
+
+      <div class="bc-panel" id="bc-panel">
+        <section class="bc-work" aria-label="筆算">
+          <div class="bc-pgrid" id="bc-grid"></div>
+          <div class="bc-pgrid bc-mini" id="bc-verify" hidden></div>
+        </section>
+        <section class="bc-side" aria-label="手順">
+          <div class="bc-qhead"><h2 class="bc-qtitle" id="bc-qtitle"></h2><div class="bc-streak" id="bc-streak"></div></div>
+          <p class="bc-stagehead" id="bc-stagehead"></p>
+          <p class="bc-instr" id="bc-instr"></p>
+          <ol class="bc-chips" id="bc-chips" aria-label="段の結果"></ol>
+          <div class="bc-btnrow"><button type="button" class="btn-primary bc-btn" id="bc-check"></button><span class="bc-enterhint" id="bc-enterhint"></span></div>
+          <p class="bc-cellmsg" id="bc-cellmsg" role="status" aria-live="polite"></p>
+          <div class="bc-feedback" id="bc-feedback" role="status" aria-live="polite"></div>
+          <p class="bc-extra" id="bc-extra" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+
+      <details id="bc-defs" class="bc-details"><summary id="bc-defs-sum"></summary><div id="bc-defs-body"></div></details>
+      <details id="bc-mine" class="bc-details bc-mine"><summary id="bc-mine-sum"></summary><div id="bc-mine-body"></div></details>
+      <div class="bc-foot"><button type="button" class="bc-linkbtn" id="bc-reset-btn">記録を消す</button></div>
+      <div class="bc-confirm" id="bc-reset-confirm" role="alertdialog" aria-labelledby="bc-reset-ask" hidden>
+        <p id="bc-reset-ask"></p>
+        <div class="bc-btnrow"><button type="button" class="btn-secondary bc-smallbtn" id="bc-reset-no"></button><button type="button" class="btn-primary bc-smallbtn" id="bc-reset-yes"></button></div>
+      </div>
+      <p class="bc-note bc-warn" id="bc-storage-note" hidden></p>
+      <pre id="bc-selftest" class="bc-selftest" hidden></pre>
+    </section>
   </main>
+  <p class="bc-selftest-note" id="bc-selftest-note" role="status" hidden></p>
 
   <!-- =============== 5. 難易度選択モーダル =============== -->
   <!-- =============== 5. トレーニング設定モーダル =============== -->
@@ -230,5 +329,8 @@
 
   <script src="generators.js"></script>
   <script src="app.js"></script>
+  <!-- 2進数の計算（足し算・補数）: コア（DOM に触らない）→ 画面 -->
+  <script src="binary-calc-core.js"></script>
+  <script src="binary-calc.js"></script>
 </body>
 </html>

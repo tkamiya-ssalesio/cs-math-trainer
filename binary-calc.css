@@ -1,0 +1,184 @@
+/* ============================================================
+   2進数の計算（足し算・補数）— CS Math Trainer の 4 つ目のカテゴリ
+   style.css の変数（--accent-* / --panel-* / --text-* / --font-main）と部品（.card-btn / .btn-primary / .btn-secondary /
+   .tutorial-* / .step-dot / .section-title）をそのまま使う（app.js が掴むクラス・属性は使わない：.modal-diff-tab-btn・data-diff・.category-select-btn・.submenu-action-btn など）．既存のクラス・規則は上書きしない
+   （新しいクラスはすべて bc- で始める．.app-container への変更は .bc-compact（練習画面）のときだけ）
+   ============================================================ */
+
+/* ---- 練習画面だけ，枠を広げてヘッダーを小さくする（ほかの画面は今までどおり） ---- */
+.app-container.bc-compact { max-width: 1100px; width: 96%; padding: 1.1rem 1.25rem 1.25rem; }
+.app-container.bc-compact > header, .app-container.bc-learn > header { margin-bottom: 0.6rem; text-align: left; display: flex; align-items: baseline; gap: 0.8rem; }
+.app-container.bc-compact > header h1, .app-container.bc-learn > header h1 { font-size: 1.15rem; letter-spacing: 0.5px; }
+.app-container.bc-compact > header .subtitle, .app-container.bc-learn > header .subtitle { display: none; }
+/* 練習画面だけ上寄せ（style.css の body は縦中央寄せ．結果欄・ヒントが伸びても，筆算が上下に動かないように）．body.bc-top は binary-calc.js が練習画面のときだけ付ける */
+body.bc-top { align-items: flex-start; }
+/* 解説画面：ヘッダーを小さくして，どのステップも 1366×768・1280×800 でスクロールなしに収める */
+.app-container.bc-learn { padding: 1.1rem 2rem 1.2rem; }
+
+.bc-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.bc-note { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.6rem; line-height: 1.6; }
+.bc-note.bc-warn { color: var(--accent-red); font-weight: 700; }
+[hidden] { display: none !important; }
+
+/* ---- サブメニュー ---- */
+.bc-ticks { display: flex; gap: 0.5rem; margin-top: 0.1rem; flex-wrap: wrap; }
+.bc-tick { font-size: 0.72rem; color: var(--text-secondary); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.05rem 0.6rem; white-space: nowrap; }
+.bc-tick .bc-mk { font-weight: 700; }
+.bc-tick.bc-done { color: var(--accent-green); border-color: rgba(57, 255, 20, 0.45); background: rgba(57, 255, 20, 0.08); }
+.bc-diffsel { display: flex; gap: 0.6rem; }
+.bc-diff-btn { flex: 1; appearance: none; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.6rem 0; color: var(--text-primary); font-family: var(--font-main); font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: var(--transition-smooth); text-align: center; line-height: 1.3; }
+.bc-diff-btn:hover { background: rgba(255, 255, 255, 0.05); }
+.bc-diff-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+.bc-diff-btn.bc-sel[data-level="easy"] { border-color: var(--accent-green); color: var(--accent-green); box-shadow: 0 0 15px rgba(57, 255, 20, 0.15); background: rgba(57, 255, 20, 0.03); }
+.bc-diff-btn.bc-sel[data-level="medium"] { border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15); background: rgba(0, 242, 254, 0.03); }
+.bc-diffsub { font-size: 0.7rem; opacity: 0.8; }
+
+/* ---- 練習：上の行（戻る・種類・難易度） ---- */
+.bc-topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.bc-linkbtn { appearance: none; font: inherit; font-size: 0.85rem; background: none; border: 0; color: var(--text-secondary); text-decoration: underline; cursor: pointer; padding: 0.4rem 0.3rem; }
+.bc-linkbtn:hover { color: var(--text-primary); }
+.bc-kinds { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.bc-kbtn, .bc-bbtn { appearance: none; font-family: var(--font-main); font-weight: 600; font-size: 0.9rem; color: var(--text-primary); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.45rem 0.9rem; min-height: 2.4rem; cursor: pointer; transition: var(--transition-smooth); line-height: 1.3; }
+.bc-kbtn:hover, .bc-bbtn:hover { background: rgba(255, 255, 255, 0.07); }
+.bc-kbtn[aria-pressed="true"] { background: rgba(0, 242, 254, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: var(--shadow-neon); }
+.bc-bitsw { display: inline-flex; gap: 0.4rem; margin-left: auto; }
+.bc-bbtn[aria-pressed="true"] { background: rgba(57, 255, 20, 0.08); border-color: var(--accent-green); color: var(--accent-green); }
+.bc-kbtn:focus-visible, .bc-bbtn:focus-visible, .bc-linkbtn:focus-visible, .bc-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+
+/* ---- 練習：左に筆算，右に手順 ---- */
+.bc-panel { margin-top: 0.6rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 1rem 1.4rem; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.75rem 2rem; align-items: start; }
+.bc-work { min-width: 0; }
+.bc-side { min-width: 0; display: grid; align-content: start; gap: 0.55rem; }
+
+.bc-pgrid { --cw: 2.6rem; --ch: 2.9rem; --cg: 0.25rem; --ng: 0.9rem; --lab: 8.2rem; --cols: 9; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; display: grid; gap: 0.3rem; }
+.bc-pgrid.bc-mini { --cw: 1.9rem; --ch: 2.1rem; --lab: 5rem; gap: 0.15rem; margin-top: 0.6rem; padding-top: 0.5rem; border-top: 2px dashed var(--panel-border); }
+.bc-row { display: grid; grid-template-columns: var(--lab) max-content; align-items: center; column-gap: 0.7rem; }
+.bc-rlab { font-family: var(--font-main); font-size: 0.85rem; line-height: 1.25; text-align: right; color: var(--text-secondary); }
+.bc-row.bc-active .bc-rlab { color: var(--text-primary); font-weight: 700; }
+.bc-row.bc-active .bc-rlab::after { content: " ▶"; color: var(--accent-cyan); }
+.bc-lk { display: inline-block; width: 0.95em; height: 0.95em; margin-left: 0.2em; vertical-align: -0.1em; color: var(--accent-green); }
+.bc-cells { display: flex; align-items: center; gap: var(--cg); }
+.bc-row.bc-ruled .bc-cells { border-top: 0.2rem solid var(--text-primary); padding-top: 0.25rem; margin-top: 0.1rem; }
+.bc-cell { flex: none; width: var(--cw); height: var(--ch); display: inline-flex; align-items: center; justify-content: center; font-family: inherit; font-weight: 700; font-size: calc(var(--cw) * 0.69); line-height: 1; text-align: center; padding: 0; color: var(--text-primary); background: transparent; border: 2px solid transparent; border-radius: 8px; }
+.bc-cell.bc-nib { margin-left: var(--ng); }
+.bc-cell.bc-lead { margin-right: calc(var(--ng) - var(--cg)); }
+.bc-cell.bc-op { color: var(--text-secondary); font-weight: 400; }
+.bc-cell.bc-ph { visibility: hidden; }
+.bc-cell.bc-in { appearance: none; background: rgba(255, 255, 255, 0.04); border-color: var(--panel-border); cursor: default; outline: none; }
+input.bc-cell.bc-in { caret-color: transparent; }
+.bc-cell.bc-over { background: rgba(254, 193, 7, 0.1); border-color: rgba(254, 193, 7, 0.55); }
+.bc-cwrap { flex: none; position: relative; width: var(--cw); height: var(--ch); display: block; }
+.bc-cwrap.bc-lead { margin-right: calc(var(--ng) - var(--cg)); }
+.bc-cwrap > .bc-cell { width: 100%; height: 100%; margin: 0; }
+.bc-cwrap.bc-slash > .bc-cell { color: var(--text-secondary); }
+.bc-cwrap.bc-slash::after { content: ""; position: absolute; left: 10%; right: 10%; top: 50%; border-top: 3px solid var(--accent-red); transform: rotate(-38deg); pointer-events: none; }
+.bc-row.bc-active .bc-cell.bc-in { border-color: var(--accent-cyan); box-shadow: 0 0 0 1px rgba(0, 242, 254, 0.18); cursor: text; }
+.bc-row.bc-active .bc-cell.bc-in:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 1px; box-shadow: var(--shadow-neon); }
+.bc-row.bc-future .bc-cell.bc-in, .bc-row.bc-future .bc-cell.bc-cp { opacity: 0.4; }
+.bc-row.bc-future .bc-rlab { opacity: 0.6; }
+.bc-row.bc-locked .bc-cell.bc-in { background: rgba(57, 255, 20, 0.08); border-color: transparent; color: var(--text-primary); opacity: 1; -webkit-text-fill-color: var(--text-primary); }
+.bc-row.bc-locked.bc-rev .bc-cell.bc-in { background: rgba(254, 193, 7, 0.12); }
+.bc-row.bc-locked .bc-cell.bc-over { background: rgba(254, 193, 7, 0.12); border-color: rgba(254, 193, 7, 0.55); }
+.bc-row.bc-locked .bc-cell.bc-in.bc-fix { border-color: var(--accent-red); }
+.bc-cell.bc-in.bc-bad { background: rgba(255, 51, 102, 0.14); border-color: var(--accent-red); border-width: 3px; color: var(--accent-red); }
+.bc-cell.bc-in.bc-flash { background: rgba(255, 51, 102, 0.14); border-color: var(--accent-red); }
+.bc-cell.bc-in:disabled { opacity: 1; -webkit-text-fill-color: currentColor; }
+.bc-row.bc-future .bc-cell.bc-in:disabled { opacity: 0.4; }
+
+.bc-qhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.2rem 1rem; }
+.bc-qtitle { font-family: "BIZ UDGothic", "Osaka-Mono", ui-monospace, "Menlo", "Consolas", monospace; font-size: 1.35rem; font-weight: 800; line-height: 1.4; }
+.bc-streak { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-secondary); }
+.bc-dot { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid var(--accent-cyan); background: transparent; display: inline-block; }
+.bc-dot.bc-on { background: var(--accent-cyan); box-shadow: var(--shadow-neon); }
+.bc-clearmark { color: var(--accent-green); font-weight: 800; margin-left: 0.2rem; }
+.bc-stagehead { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; }
+.bc-stagehead b { color: var(--accent-cyan); }
+.bc-instr { font-size: 1.15rem; font-weight: 700; line-height: 1.55; min-height: 3.6rem; }
+.bc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; list-style: none; }
+.bc-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: 10px; padding: 0.1rem 0.65rem; font-size: 0.9rem; line-height: 1.5; }
+.bc-chip.bc-cur { border-color: var(--accent-cyan); background: rgba(0, 242, 254, 0.08); font-weight: 700; }
+.bc-chip .bc-mk { font-weight: 700; min-width: 1em; text-align: center; color: var(--text-secondary); }
+.bc-chip.bc-ok .bc-mk { color: var(--accent-green); }
+.bc-chip.bc-ng { border-color: var(--accent-red); }
+.bc-chip.bc-ng .bc-mk { color: var(--accent-red); }
+.bc-btnrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.bc-btn.btn-primary { display: inline-block; width: auto; margin-top: 0; padding: 0.7rem 1.8rem; font-size: 1rem; border-radius: 999px; min-height: 2.8rem; }
+.bc-smallbtn.btn-primary, .bc-smallbtn.btn-secondary { display: inline-block; width: auto; flex: none; margin-top: 0; padding: 0.45rem 1.3rem; font-size: 0.9rem; border-radius: 999px; }
+.bc-enterhint { font-size: 0.8rem; color: var(--text-secondary); }
+.bc-cellmsg { min-height: 1.3rem; font-size: 0.85rem; color: var(--accent-red); font-weight: 700; line-height: 1.4; }
+.bc-feedback { min-height: 5.4rem; border-radius: 12px; padding: 0.5rem 0.9rem; display: grid; align-content: start; gap: 0.15rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); }
+.bc-feedback:empty { visibility: hidden; }
+.bc-feedback .bc-fh { font-weight: 700; font-size: 1.05rem; line-height: 1.5; }
+.bc-feedback .bc-fd, .bc-feedback .bc-fhint { font-size: 0.95rem; line-height: 1.5; }
+.bc-feedback .bc-fhint::before { content: "ヒント："; font-weight: 700; }
+.bc-feedback.bc-ok { background: rgba(57, 255, 20, 0.07); border-color: rgba(57, 255, 20, 0.4); color: var(--accent-green); }
+.bc-feedback.bc-retry { background: rgba(254, 193, 7, 0.08); border-color: rgba(254, 193, 7, 0.45); }
+.bc-feedback.bc-ng { background: rgba(255, 51, 102, 0.08); border-color: rgba(255, 51, 102, 0.5); }
+.bc-feedback.bc-ng .bc-fh { color: var(--accent-red); }
+.bc-feedback.bc-clear { background: rgba(57, 255, 20, 0.14); border-color: var(--accent-green); color: var(--accent-green); box-shadow: var(--shadow-green); }
+.bc-extra { min-height: 1.6rem; font-size: 0.95rem; font-weight: 700; color: var(--accent-green); line-height: 1.5; }
+
+/* ---- 練習：下（ことば・記録・確認） ---- */
+.bc-details { margin-top: 0.6rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.3rem 1rem; }
+.bc-details summary { cursor: pointer; font-weight: 600; min-height: 2rem; line-height: 2rem; font-size: 0.9rem; }
+.bc-details p { margin: 0.3rem 0; font-size: 0.9rem; }
+.bc-mine table { border-collapse: collapse; margin: 0.4rem 0; font-size: 0.85rem; }
+.bc-mine th, .bc-mine td { border-bottom: 1px solid var(--panel-border); padding: 0.15rem 0.9rem 0.15rem 0; text-align: left; }
+.bc-mine td.bc-num, .bc-mine th.bc-num { text-align: right; font-variant-numeric: tabular-nums; }
+.bc-weak { background: rgba(254, 193, 7, 0.18); color: var(--accent-yellow); border-radius: 4px; padding: 0 0.4rem; font-weight: 700; }
+.bc-foot { text-align: right; }
+.bc-confirm { margin-top: 0.5rem; background: rgba(255, 51, 102, 0.08); border: 1px solid var(--accent-red); border-radius: 12px; padding: 0.6rem 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.bc-confirm p { font-weight: 700; font-size: 0.9rem; }
+.bc-selftest-note { pointer-events: none; position: fixed; right: 0.6rem; bottom: 0.5rem; z-index: 5; margin: 0; padding: 0.15rem 0.7rem; font-size: 0.75rem; font-weight: 700; color: var(--accent-yellow); background: rgba(0, 0, 0, 0.75); border: 1px solid rgba(254, 193, 7, 0.55); border-radius: 999px; }
+.bc-selftest { background: #000; color: #8f8; border-radius: 10px; padding: 0.75rem; overflow-x: auto; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-top: 0.8rem; }
+
+/* ---- 解説 ---- */
+.bc-learn-screen-title { margin-bottom: 0.4rem; }
+.bc-learn-body { margin-bottom: 0.8rem; }
+.bc-learn-close { width: 100%; margin-top: 0.6rem; }
+.bc-tutorial { position: relative; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 1.1rem 1.5rem; min-height: 25.3rem; }
+.bc-tutorial .tutorial-text { margin-bottom: 0.7rem; line-height: 1.6; }
+.bc-tutorial .tutorial-visual { min-height: 0; padding: 0.7rem 1rem; }
+.bc-tutorial .bc-vis { gap: 0.25rem; }
+.bc-tutorial .bc-vc { width: 1.95rem; height: 2.25rem; font-size: 1.4rem; }
+.bc-learn-h { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.4rem; }
+.bc-learn-p { margin-bottom: 0.3rem; }
+.bc-learn-p .bc-nb { white-space: nowrap; }                /* 短い太字（「1 km 減る」など）を行末で割らない */
+.bc-vis { display: grid; gap: 0.35rem; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; max-width: 100%; }
+.bc-vrow { display: grid; grid-template-columns: 7.5rem 1.4rem max-content minmax(0, auto); align-items: center; column-gap: 0.5rem; }
+.bc-vlab { font-family: var(--font-main); font-size: 0.8rem; color: var(--text-secondary); text-align: right; line-height: 1.2; }
+.bc-vop { font-size: 1.4rem; color: var(--text-secondary); text-align: center; }
+.bc-vcells { display: flex; gap: 0.2rem; }
+.bc-vruled .bc-vcells { border-top: 0.18rem solid var(--text-primary); padding-top: 0.2rem; }
+.bc-vc { position: relative; width: 2.1rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; border: 1px solid var(--panel-border); border-radius: 8px; background: rgba(255, 255, 255, 0.03); }
+.bc-vc.bc-vph { visibility: hidden; }
+.bc-vc.bc-vhl { color: var(--accent-red); border: 2px solid var(--accent-red); background: rgba(255, 51, 102, 0.1); }
+.bc-vc.bc-vslash { color: var(--text-secondary); }
+.bc-vc.bc-vslash::after { content: ""; position: absolute; left: 8%; right: 8%; top: 50%; border-top: 3px solid var(--accent-red); transform: rotate(-38deg); }
+.bc-vodo .bc-vc:not(.bc-vph) { background: #05070d; color: #f3f4f6; border-color: rgba(255, 255, 255, 0.25); }
+.bc-vnote { font-family: var(--font-main); font-size: 0.8rem; color: var(--accent-yellow); font-weight: 700; padding-left: 0.4rem; }
+.bc-fade { animation: bc-fadein 0.5s ease both; animation-delay: var(--d, 0s); }
+@keyframes bc-fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---- 幅の小さい画面：縦に並べる ---- */
+@media (max-width: 60rem) {
+  .bc-panel { grid-template-columns: minmax(0, 1fr); padding: 0.9rem 0.75rem; }
+  .bc-pgrid { --cw: min(2.6rem, calc((90vw - 4.2rem) / var(--cols) - var(--cg))); --ch: calc(var(--cw) * 1.12); --ng: 0.5rem; }
+  .bc-pgrid.bc-mini { --cw: min(1.9rem, calc((90vw - 4.2rem) / var(--cols) - var(--cg))); --ch: calc(var(--cw) * 1.1); }
+  .app-container.bc-compact { width: 94%; padding: 0.9rem 0.8rem 1rem; }
+}
+@media (max-width: 44rem) {
+  .bc-row { grid-template-columns: max-content; row-gap: 0.05rem; }
+  .bc-rlab { text-align: left; }
+  .bc-row.bc-active .bc-rlab::after { content: " ▼"; }
+  .bc-pgrid { --lab: auto; gap: 0.35rem; }
+  .bc-pgrid.bc-mini .bc-row { grid-template-columns: max-content; }
+  .bc-instr { min-height: 0; }
+  .bc-qtitle { font-size: 1.1rem; }
+  .bc-feedback { min-height: 4rem; }
+  .bc-bitsw { margin-left: 0; }
+  .bc-vrow { grid-template-columns: 1.4rem max-content minmax(0, auto); row-gap: 0.1rem; }
+  .bc-vlab { grid-column: 1 / -1; text-align: left; }
+  .bc-vc, .bc-tutorial .bc-vc { width: 1.7rem; height: 2.1rem; font-size: 1.2rem; }
+}
+@media (prefers-reduced-motion: reduce) { .bc-fade { animation: none; } }
