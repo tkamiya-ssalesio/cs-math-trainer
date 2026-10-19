@@ -39,7 +39,6 @@ class Env:
     def st(s): return s.pg.evaluate(JS_ACTIVE)
     def bulk(s,method,text):
         pg=s.pg
-        if method.endswith('-full') or method.startswith('fw'): pass
         t=text
         if method=='chrome': pg.evaluate('''t=>{const e=document.activeElement;e.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true,data:''}));e.dispatchEvent(new CompositionEvent('compositionupdate',{bubbles:true,data:t}));e.value=t;e.dispatchEvent(new InputEvent('input',{bubbles:true,data:t,inputType:'insertCompositionText',isComposing:true}));e.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true,data:t}));}''',t)
         elif method=='chrome-fw': s.bulk('chrome',fw(text))
@@ -122,7 +121,7 @@ with sync_playwright() as p:
               for r in ('enter','button'):
                   ms=fresh(); w=ms[stage]; w=w[:-1]+('1' if w[-1]=='0' else '0')
                   E.bulk(m,w); E.check(r); st=E.st()
-                  rec(st['fb']=='誤り' or st['fb'].startswith('ちが') or ('おわり' not in st['head'] and ('段 %d／'%(stage+1)) in st['head']), tag('C %s wrong'%m)+' fb=%r'%st['fb'])
+                  rec(st['fb'].startswith('おしい') and ('段 %d／'%(stage+1)) in st['head'], tag('C %s wrong'%m)+' fb=%r head=%r'%(st['fb'],st['head']))
                   E.bulk(m,ms[stage]); st=E.st()
                   rec(''.join(st['vals'])==ms[stage], tag('C %s %s retype'%(m,r))+' vals=%s want=%s'%(''.join(st['vals']),ms[stage]))
                   E.check(r)
@@ -144,7 +143,7 @@ with sync_playwright() as p:
                   rec(''.join(st['vals'])==ms[stage], tag('E %s f=%s'%(m,fpos))+' vals=%s'%st['vals'])
                   # ltr のまま（矢印だけで動かす）
                   ms=fresh(); E.bulk(m,ms[stage][:max(2,L//2)] if L>2 else '10')
-                  for _ in range(idx if False else 1): pg.keyboard.press('ArrowLeft')
+                  pg.keyboard.press('ArrowLeft')
                   E.bulk(m,ms[stage]); st=E.st()
                   rec(''.join(st['vals'])==ms[stage], tag('E-ltr %s'%m)+' vals=%s'%st['vals'])
           # F: Backspace で空に戻る→1 文字は右端から

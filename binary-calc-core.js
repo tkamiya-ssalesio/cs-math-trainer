@@ -150,8 +150,8 @@ var BinCalcCore = (function () {
           visual: { type: "grid", cols: 5, rows: [
             { label: "もとの数", d: " 0100" }, { label: "補数", d: " 1100", op: "＋" }, { label: "和", d: "10000", ruled: true, note: "1桁増えた" } ] } },
         { title: "走行距離計に999を足すと",
-          text: ["3桁の走行距離計（図は想定）．進むだけで，戻れない．999 の次は 000．",
-                 "今は 100 km．999 を足すと，100＋999＝1099．左端の 1 は窓に出ないので，表示は 099．",
+          text: ["3桁の走行距離計（実物はもっと桁が多い．図は想定）．進むだけで，戻れない．",
+                 "999 の次は 000．今は 100 km．999 を足すと，100＋999＝1099．左端の 1 は窓に出ず，表示は 099．",
                  "100 km が 099 km になった．001 の10進数の補数 999 を足すと，距離が <b>1 km 減る</b>．"],
           visual: { type: "odo", from: "100", add: "999", to: "099", sum: "1099" } },
         { title: "37 km 減らすには",
@@ -434,7 +434,7 @@ var BinCalcCore = (function () {
     o.detail = describeWrong(st, j.wrong);
     o.hint = j.diag ? j.diag.text : null;
     if (o.st.result === "rev") { o.head = TEXT.msg.rev; o.reveal = true; o.final = true; o.result = "rev"; }
-    else { o.head = TEXT.msg.retry; o.detail += "．" + TEXT.msg.fixRed; }    // 1回目の誤り：赤いマスだけ直す（行全体を打ち直すと桁がずれる）
+    else { o.head = TEXT.msg.retry; o.detail += "．" + TEXT.msg.fixRed; }    // 1回目の誤り：赤いマスを示して直させる（行全体を一括で打ち直しても，マス数以上なら左端から置き換わる）
     return o;
   }
   function problemSummary(ids, results) {   // 最後の段が終わったあとの結果文
@@ -1119,6 +1119,18 @@ var BinCalcCore = (function () {
       r = emptyRefusal(["1", "", "1", ""]); check(r.empty === 2 && r.focus === 3 && r.dir === "rtl", "空きを断られたあと：rtl・右端から見て最初の空き");
       r = emptyRefusal(["1", "", "1", "1"]); check(r.empty === 1 && r.focus === 1 && r.dir === "rtl", "空きが 1 つ");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "Enter" }); check(r.submit, "Enter＝答え合わせ（どのマスでも）");
+      (function () {   // cellEdit が msg を返すのは断った（rejected）ときだけ．画面側は msg を rejected のときしか使わない
+        var evs = [{ type: "input", value: "1" }, { type: "input", value: "2" }, { type: "input", value: "10110" }, { type: "input", value: "" }, { type: "paste" }, { type: "focus" },
+                   { type: "key", key: "Enter" }, { type: "key", key: "Backspace" }, { type: "key", key: "Delete" }, { type: "key", key: "Home" }, { type: "key", key: "End" }, { type: "key", key: "ArrowLeft" },
+                   { type: "key", key: "ArrowRight" }, { type: "key", key: "ArrowUp" }, { type: "key", key: " " }, { type: "key", key: "0" }],
+            states = [["", "", "", ""], ["1", "", "1", ""], ["1", "0", "1", "1"]], d = ["ltr", "rtl"], a, b, c, e, f, q, bad = 0;
+        for (a = 0; a < evs.length; a++) for (b = 0; b < states.length; b++) for (c = 0; c < 4; c++) for (e = 0; e < 2; e++) {
+          f = { type: evs[a].type, key: evs[a].key, value: evs[a].value };
+          q = cellEdit({ cells: states[b].slice(), focus: c, dir: d[e] }, f);
+          if (q.msg !== "" && !q.rejected) bad++;
+        }
+        check(bad === 0, "msg が空でないのは rejected のときだけ（画面側の else-if msg 分岐は不要）");
+      })();
       r = cellEdit({ cells: ["", "", "", ""], focus: 2 }, { type: "paste" }); check(r.rejected && r.cells.join("") === "", "貼り付けは受けない");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 1 }, { type: "key", key: "0" }); check(r.cells.join("") === "1011", "keydown の 0/1 では変えない（input で正規化）");
       // 引き算の筆算を外した：マスは 0 か 1 だけ．切り替え（toggle）・Space・11 の入力は受けない

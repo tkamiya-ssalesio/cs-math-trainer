@@ -301,7 +301,6 @@
     focusCell(S.focus);
     if (r.rejected) flash(at);
     if (r.submit) check();
-    else if (r.msg && !r.rejected) showFeedback("retry", r.msg);
   }
   function setFocusIndex(i) {
     var r = activeRow(); if (!r || isNaN(i)) return;
