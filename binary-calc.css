@@ -10,6 +10,8 @@
 .app-container.bc-compact > header, .app-container.bc-learn > header { margin-bottom: 0.6rem; text-align: left; display: flex; align-items: baseline; gap: 0.8rem; }
 .app-container.bc-compact > header h1, .app-container.bc-learn > header h1 { font-size: 1.15rem; letter-spacing: 0.5px; }
 .app-container.bc-compact > header .subtitle, .app-container.bc-learn > header .subtitle { display: none; }
+/* 練習画面だけ上寄せ（style.css の body は縦中央寄せ．結果欄・ヒントが伸びても，筆算が上下に動かないように）．body.bc-top は binary-calc.js が練習画面のときだけ付ける */
+body.bc-top { align-items: flex-start; }
 /* 解説画面：ヘッダーを小さくして，どのステップも 1366×768・1280×800 でスクロールなしに収める */
 .app-container.bc-learn { padding: 1.1rem 2rem 1.2rem; }
 

@@ -21,6 +21,7 @@
     var all = document.querySelectorAll(".screen"), i, app = document.querySelector(".app-container");
     for (i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
     if (app) { app.classList.toggle("bc-compact", id === "bc-play-screen"); app.classList.toggle("bc-learn", id === "bc-learn-screen"); }
+    document.body.classList.toggle("bc-top", id === "bc-play-screen");          // 練習画面だけ上寄せ（結果欄が伸びても筆算が動かない．ほかの画面は style.css のまま）
     try { window.scrollTo(0, 0); } catch (e) { }
   }
 
@@ -674,14 +675,22 @@
         return v === "0" ? "1" : "0";
       });
     }
+    function pos() { var g = $("bc-grid").getBoundingClientRect(), q = $("bc-qtitle").getBoundingClientRect(); return [g.top, g.bottom, q.top, q.bottom]; }
+    function checkSteady() {                               // 答え合わせの前後で，筆算と題の位置が動かない（上寄せ）
+      var a = pos(), b, d, k;
+      check(); b = pos(); d = 0;
+      for (k = 0; k < 4; k++) d = Math.max(d, Math.abs(a[k] - b[k]));
+      out.layout.maxShift = Math.max(out.layout.maxShift || 0, d);
+      out.checked++; if (d > 2) fail("答え合わせの前後で筆算・題の位置が " + d.toFixed(1) + "px 動く：" + C.titleOf(S.p));
+    }
     function runProblem(mode, n) {
       var st = S.stages, si, j, nWrong, model, kinds = ["all", "last"];
-      if (mode === 3) { check(); audit1("空で答え合わせ"); }
+      if (mode === 3) { checkSteady(); audit1("空で答え合わせ"); }
       for (si = 0; si < st.length; si++) {
         nWrong = (mode === 1 && si === n % st.length) ? 1 : (mode === 2 && si === n % st.length) ? 2 : 0;
         model = st[si].model;
-        for (j = 0; j < nWrong; j++) { S.cells = variant(model, kinds[(n + j) % 2]); refreshRows(); check(); audit1("誤り " + C.titleOf(S.p) + " " + st[si].id); }
-        if (nWrong < 2) { S.cells = model.slice(); refreshRows(); check(); audit1("正解 " + C.titleOf(S.p) + " " + st[si].id); }
+        for (j = 0; j < nWrong; j++) { S.cells = variant(model, kinds[(n + j) % 2]); refreshRows(); checkSteady(); audit1("誤り " + C.titleOf(S.p) + " " + st[si].id); }
+        if (nWrong < 2) { S.cells = model.slice(); refreshRows(); checkSteady(); audit1("正解 " + C.titleOf(S.p) + " " + st[si].id); }
       }
       lockedRowsMatch(); audit1("解き終わり " + C.titleOf(S.p));
       out.problems++;
