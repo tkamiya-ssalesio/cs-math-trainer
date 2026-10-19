@@ -5,7 +5,7 @@
    ・記録のキーを csMathTrainer.binaryCalc.v1 に（CS Math Trainer 全体と衝突しない）
    ・補数の定義を紙（本番版）の文に．③ の語順を「① 補数を足す → はみ出した桁を無視 → ② 10進数で確かめる」に
    ・Minor-C：赤いマスの模範が 1 と 0 で混ざるときの繰り上がりのヒントを、規則を言う文に（A-c3）
-   ・まとめて入力（2 文字以上）は読む順に右へ配る（行が空なら左端から，そうでなければフォーカスのマスから）．行ごとに入力の向き（rtl／ltr）を持つ
+   ・まとめて入力（2 文字以上）は読む順に右へ配る（ltr でフォーカス以降に空きがあればフォーカスのマスから，それ以外は左端から）．行ごとに入力の向き（rtl／ltr）を持つ
    ・「全部クリア」の判定と seenDef を持たない
    ============================================================ */
 var BinCalcCore = (function () {
@@ -149,16 +149,16 @@ var BinCalcCore = (function () {
           text: ["もとの数に補数を足すと，<b>10…0</b>（1桁増えた形）になる．", "0100＋1100＝10000．"],
           visual: { type: "grid", cols: 5, rows: [
             { label: "もとの数", d: " 0100" }, { label: "補数", d: " 1100", op: "＋" }, { label: "和", d: "10000", ruled: true, note: "1桁増えた" } ] } },
-        { title: "補数を使った引き算の考え方（走行距離計）",
+        { title: "走行距離計に999を足すと",
           text: ["3桁の走行距離計（実物はもっと桁が多い．図は想定）．進むだけで，戻れない．999 の次は 000．",
                  "今は 100 km．999 を足すと，100＋999＝1099．左端の 1 は窓に出ないので，表示は 099．",
-                 "100 km が 099 km になった．999（001 の補数）を足すと，距離が <b>1 km 減る</b>．"],
+                 "100 km が 099 km になった．001 の10進数の補数 999 を足すと，距離が <b>1 km 減る</b>．"],
           visual: { type: "odo", from: "100", add: "999", to: "099", sum: "1099" } },
         { title: "37 km 減らすには",
           text: ["37 km 減らすときは，037 の10進数の補数 963 を足す（037＋963＝1000．足すと1桁増える）．",
                  "100＋963＝1063．はみ出した 1 を無視して，表示は 063．引き算の 100−37＝63 と一致する．"],
           visual: { type: "grid", cols: 4, rows: [
-            { label: "今の距離", d: " 100" }, { label: "037 の補数", d: " 963", op: "＋" }, { label: "和", d: "1063", ruled: true, slash: [0], note: "はみ出した桁" } ] } },
+            { label: "今の距離", d: " 100" }, { label: "037 の10進数の補数", d: " 963", op: "＋" }, { label: "和", d: "1063", ruled: true, slash: [0], note: "はみ出した桁" } ] } },
         { title: "補数を使った引き算の考え方",
           text: ["<b>引く数の補数を加算し，はみ出した桁を無視する．</b>",
                  "例：0111−0100 ⇒ 0111＋（0100 の補数 1100）．",
@@ -451,7 +451,9 @@ var BinCalcCore = (function () {
      行ごとに「入力の向き」dir を持つ．
        rtl（既定）：1 文字ずつ打つと，フォーカスのマス（最初は右端）に入って左へ進む（下の桁から上の桁へ，筆算の順）．
        ltr        ：2 文字以上が一度に来た（IME の確定・insertText）あと．読む順（左から右）に続ける．
-     2 文字以上が一度に来たら，行が空なら左端から，そうでなければフォーカスのマスから，右へ読む順に配り，向きを ltr にする．
+     2 文字以上が一度に来たら，右へ読む順に配り，向きを ltr にする．開始位置は，向きが ltr（直前にこの行でまとめて入力を受けた）で
+     フォーカスのマス以降に空きがあるときだけフォーカスのマス（4 桁ずつ 2 回に分けて確定しても続けて入る），それ以外はすべて行の左端
+     （既にあるマスは上書き．行が埋まっていても，答え合わせのあとでも，打ち直した行全体が置き換わる）．
      ltr の間は 1 文字入力も右へ進む（行末で止まる）．Backspace は左へ戻って消す．
      rtl に戻るとき：Backspace／Delete で行が空になる（フォーカスは右端へ）・Home／End・クリック（ev.type "focus"）．
      段が変わる・答え合わせのあと誤りのマスへ戻るときは，呼び出し側が dir を "rtl" にして渡す ---- */
@@ -475,8 +477,9 @@ var BinCalcCore = (function () {
         if (dir === "ltr") { if (f < len - 1) f++; }
         else if (f > 0) f--;
       }
-      else {                                                      // 2 文字以上が一度に来たとき：読む順に右へ配る．行が空なら左端から，そうでなければフォーカスのマスから
-        start = isEmpty() ? 0 : f;
+      else {                                                      // 2 文字以上が一度に来たとき：読む順に右へ配る．ltr でフォーカス以降に空きがあるときだけフォーカスのマスから，それ以外は左端から
+        start = 0;
+        if (dir === "ltr") for (i = f; i < len; i++) if (cells[i] === "") { start = f; break; }
         for (i = 0; i < m.length && start + i < len; i++) cells[start + i] = m.charAt(i);
         if (start + m.length > len) r.note = TEXT.msg.overflow;   // 行の長さを超える分は捨てて知らせる
         f = Math.min(start + m.length, len - 1);                  // 続きを打つマス：配ったすぐ右（全部埋まったら右端）
@@ -909,8 +912,8 @@ var BinCalcCore = (function () {
       r = cellEdit({ cells: ["", "", "", ""], focus: 1 }, { type: "input", value: "101" }); check(r.cells.join("|") === "1|0|1|" && r.note === "" && r.focus === 3 && r.dir === "ltr", "行が空なら，フォーカスの位置によらず左端から配る");
       r = cellEdit({ cells: ["", "", "", ""], focus: 0 }, { type: "input", value: "0110" }); check(r.cells.join("") === "0110" && r.note === "", "左端にいても同じ");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "1 0 x1" }); check(r.cells.join("|") === "1|0|1|" && r.note === "", "0/1 以外は飛ばして配る");
-      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 1 }, { type: "input", value: "00" }); check(r.cells.join("") === "1001" && r.focus === 3 && r.dir === "ltr" && r.note === "", "行が空でなければ，フォーカスのマスから右へ（既にある値は上書き）");
-      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 3 }, { type: "input", value: "00" }); check(r.cells.join("") === "1110" && r.note === TEXT.msg.overflow && r.focus === 3, "行が埋まっていて右端にいるときの 2 文字は，右端の 1 マスだけ入って，あふれた分は知らせる");
+      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 1 }, { type: "input", value: "00" }); check(r.cells.join("") === "0011" && r.focus === 2 && r.dir === "ltr" && r.note === "", "rtl（既定）のまとめて入力は，行が埋まっていても，フォーカスの位置によらず左端から（既にある値は上書き）");
+      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 3 }, { type: "input", value: "00" }); check(r.cells.join("") === "0011" && r.note === "" && r.focus === 2, "行が埋まっていて右端にいるときの 2 文字も左端から（Major-2：右端の 1 マスだけ変わらない）");
       r = cellEdit({ cells: ["", "", ""], focus: 2 }, { type: "input", value: "10" }); check(r.cells.join("|") === "1|0|" && r.focus === 2 && r.note === "", "2 文字は左の 2 マス");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "x1" }); check(r.cells.join("|") === "|||1" && r.focus === 2, "0/1 が 1 文字だけなら 1 文字ずつ打つのと同じ（右端から）");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "1" }); check(r.note === "", "1 文字なら知らせない");
@@ -937,10 +940,10 @@ var BinCalcCore = (function () {
         q = nx(q, { type: "input", value: "0" }); check(q.cells.join("") === "1010" && q.focus === 3 && q.dir === "ltr", "行末ではさらに打つと右端を上書き");
         // 3 回に分ける・1 文字→まとめて（rtl の途中でまとめて来る）
         q = nx(st(["", "", "", "", "", "", "", ""], 7, "rtl"), { type: "input", value: "1" }); check(q.cells[7] === "1" && q.focus === 6 && q.dir === "rtl", "8 マス：1 文字ずつは右端から");
-        q = nx(q, { type: "input", value: "01" }); check(q.cells.join("|") === "||||||0|1" && q.focus === 7 && q.dir === "ltr", "1 文字のあとにまとめて入力：行が空でないので，フォーカスのマスから右へ");
+        q = nx(q, { type: "input", value: "01" }); check(q.cells.join("|") === "0|1||||||1" && q.focus === 2 && q.dir === "ltr", "1 文字のあとにまとめて入力：rtl なので左端から右へ（右端の 1 は残る）");
         // 行が空でないとき，フォーカスのマスから右へ配る（端を超える分は捨てて知らせる）
-        q = nx(st(["1", "", "", ""], 1, "rtl"), { type: "input", value: "01" }); check(q.cells.join("|") === "1|0|1|" && q.focus === 3 && q.dir === "ltr", "行が空でないと，フォーカスのマスから右へ");
-        q = nx(st(["1", "", "", ""], 2, "rtl"), { type: "input", value: "011" }); check(q.cells.join("|") === "1||0|1" && q.note === TEXT.msg.overflow && q.focus === 3, "フォーカスから右へ配って，行末を超える分は捨てて知らせる");
+        q = nx(st(["1", "", "", ""], 1, "rtl"), { type: "input", value: "01" }); check(q.cells.join("|") === "0|1||" && q.focus === 2 && q.dir === "ltr", "rtl なら行が空でなくても左端から右へ（上書き）");
+        q = nx(st(["1", "", "", ""], 2, "rtl"), { type: "input", value: "011" }); check(q.cells.join("|") === "0|1|1|" && q.note === "" && q.focus === 3, "rtl の 3 文字は左端から 3 マス");
         // Backspace：ltr では左へ戻って消す．行が空になったら rtl・右端へ戻る
         q = nx(w, { type: "input", value: "10" });
         q = nx(q, { type: "key", key: "Backspace" }); check(q.cells.join("|") === "1|||" && q.focus === 1 && q.dir === "ltr", "ltr の Backspace：左のマスを消して戻る");
@@ -961,6 +964,36 @@ var BinCalcCore = (function () {
         q = nx(st(["", "", ""], 2, "rtl"), { type: "input", value: "10" }); check(q.cells.join("|") === "1|0|" && q.focus === 2 && q.dir === "ltr", "繰り上がりの行（3 マス）：まとめて入力");
         q = nx(q, { type: "input", value: "1" }); check(q.cells.join("") === "101" && q.focus === 2, "繰り上がりの行：続きの 1 文字は右へ，行末で止まる");
         q = nx(st(["", "", "", "", ""], 4, "rtl"), { type: "input", value: "10" }); q = nx(q, { type: "input", value: "01" }); check(q.cells.join("|") === "1|0|0|1|" && q.focus === 4, "和の行（5 マス）：2 回に分けて確定");
+        // Major-2：誤りの答え→答え合わせ（rtl に戻る）→まとめて正解を打ち直すと，行全体が置き換わる．マス数・位置・埋まり具合の組み合わせ
+        (function () {
+          var lens = [3, 4, 5, 8, 9], li, L, wrongRow, right, k, z, pos, want, tag;
+          for (li = 0; li < lens.length; li++) {
+            L = lens[li]; right = ""; for (k = 0; k < L; k++) right += (k % 3 === 1 ? "0" : "1");
+            for (z = 0; z < 4; z++) {                                               // 0：埋まって右端 1：埋まって誤りのマス（途中） 2：途中まで空 3：空
+              wrongRow = right.split("");
+              if (z < 2) wrongRow[L - 1] = wrongRow[L - 1] === "1" ? "0" : "1";
+              if (z === 2) for (k = 0; k < Math.floor(L / 2); k++) wrongRow[k] = "";
+              if (z === 3) wrongRow = wrongRow.map(function () { return ""; });
+              pos = z === 0 ? L - 1 : z === 1 ? Math.floor(L / 2) : z === 2 ? 0 : L - 1;
+              tag = L + " マス・パターン " + z;
+              q = nx(st(wrongRow, pos, "rtl"), { type: "input", value: right });
+              check(q.cells.join("") === right && q.note === "" && q.dir === "ltr", "答え合わせのあとの打ち直し（rtl）で行全体が正解になる：" + tag);
+              q = nx(st(wrongRow, pos, "rtl"), { type: "input", value: right.replace(/0/g, "０").replace(/1/g, "１") });
+              check(q.cells.join("") === right, "全角でも同じ：" + tag);
+            }
+          }
+          // 右端から 1・0 と打ったあとまとめて「110」→左端から（自分で入れた 2 マスは残る）
+          q = nx(st(["", "", "", "", "", "", "", ""], 7, "rtl"), { type: "input", value: "1" }); q = nx(q, { type: "input", value: "0" });
+          q = nx(q, { type: "input", value: "110" }); check(q.cells.join("|") === "1|1|0||||0|1" && q.focus === 3 && q.dir === "ltr", "右端から 1・0 のあとまとめて「110」：左端から（110___01）");
+          // 4 桁ずつ 2 回（ltr で続けて入る）．8 ビット
+          q = nx(st(["", "", "", "", "", "", "", ""], 7, "rtl"), { type: "input", value: "１０１１" }); q = nx(q, { type: "input", value: "0010" });
+          check(q.cells.join("") === "10110010" && q.note === "" && q.focus === 7, "4 桁ずつ 2 回に分けて確定（8 ビット）：10110010");
+          // 2 回に分けて確定したあと，同じ行をまとめて打ち直す（ltr で行が埋まっている）→左端から全体を置き換え
+          q = nx(q, { type: "input", value: "01100110" }); check(q.cells.join("") === "01100110" && q.note === "", "埋まった ltr の行にまとめて打ち直す→左端から全体が置き換わる");
+          // ltr で途中にいて空きがあるときだけフォーカスのマスから
+          q = nx(st(["1", "0", "", "", "", "", "", ""], 2, "ltr"), { type: "input", value: "11" }); check(q.cells.join("|") === "1|0|1|1||||" && q.focus === 4, "ltr・空きあり：フォーカスのマスから続く");
+          q = nx(st(["1", "0", "1", "1", "0", "0", "1", "1"], 3, "ltr"), { type: "input", value: "00" }); check(q.cells.join("") === "00110011" && q.focus === 2, "ltr・以降に空きなし：左端から置き換え");
+        })();
         // 純粋性：向きを含めて入力の row を書き換えない
         var rr0 = st(["", "", "", ""], 3, "ltr"); cellEdit(rr0, { type: "input", value: "11" }); check(rr0.cells.join("") === "" && rr0.focus === 3 && rr0.dir === "ltr", "row（向きを含む）を書き換えない");
       })();
@@ -1123,6 +1156,8 @@ var BinCalcCore = (function () {
       check(TEXT.defs[0] === "補数：ある数に対し，足すと1桁増える最も小さな数．", "補数の定義は紙の本番版の文");
       check(TEXT.defs.length === 2 && TEXT.defs[1] === "加算は繰り上げ（桁上げ）をする．", "加算の定義文は 1 文だけ");
       check(steps.every(function (st) { return st.visual === null || ["grid", "odo"].indexOf(st.visual.type) >= 0; }), "絵の種類");
+      check(steps.map(function (st) { return st.title; }).filter(function (t, i, a) { return a.indexOf(t) === i; }).length === steps.length, "解説の題は重ならない");
+      check(flat.indexOf("走行距離計に999を足すと") >= 0 && flat.indexOf("001 の10進数の補数 999") >= 0 && flat.indexOf("037 の10進数の補数") >= 0 && flat.indexOf("999（001 の補数）") < 0, "走行距離計の語は紙にそろえる（001 の10進数の補数 999）");
       check(steps.every(function (st) { return !st.visual || st.visual.type !== "grid" || st.visual.rows.every(function (r) { return r.d.length === st.visual.cols; }); }), "絵の桁数がそろっている");
     })();
 
