@@ -246,12 +246,12 @@
     $("bc-enterhint").textContent = S.done ? U.hintNext : U.hintCheck;
   }
 
-  function freshStageCells() { var st = S.stages[S.idx]; S.cells = []; for (var i = 0; i < st.len; i++) S.cells.push(""); S.focus = st.len - 1; S.bad = {}; }
+  function freshStageCells() { var st = S.stages[S.idx]; S.cells = []; for (var i = 0; i < st.len; i++) S.cells.push(""); S.focus = st.len - 1; S.bad = {}; S.dir = "rtl"; }
 
   function newProblem() {
     var p = C.gen(sel.kind, sel.bits, lastP), stages;
     lastP = p; stages = C.stagesOf(p);
-    S = { p: p, stages: stages, idx: 0, sst: stages.map(function () { return C.newStageState(); }), results: [], view: [], fixes: [], done: false, doneAt: 0, rows: [], cells: [], focus: 0, bad: {} };
+    S = { p: p, stages: stages, idx: 0, sst: stages.map(function () { return C.newStageState(); }), results: [], view: [], fixes: [], done: false, doneAt: 0, rows: [], cells: [], focus: 0, dir: "rtl", bad: {} };
     C.recStart(rec, sel.kind, sel.bits); persist();
     freshStageCells();
     buildGrid(); refreshRows(); renderSide(); renderMine();
@@ -290,8 +290,8 @@
     var at, r, before, j;
     if (i != null && !isNaN(i)) S.focus = i;
     at = S.focus; before = S.cells;
-    r = C.cellEdit({ cells: S.cells, focus: S.focus }, ev);
-    S.cells = r.cells; S.focus = r.focus;
+    r = C.cellEdit({ cells: S.cells, focus: S.focus, dir: S.dir }, ev);
+    S.cells = r.cells; S.focus = r.focus; S.dir = r.dir;
     for (j = 0; j < before.length; j++) if (before[j] !== r.cells[j]) delete S.bad[j];
     $("bc-cellmsg").textContent = r.rejected ? r.msg : r.note;
     refreshRows();
@@ -341,6 +341,10 @@
         if (name === "paste") apply({ type: "paste" }, cellIndex(ev.target));
       });
     });
+    g.addEventListener("pointerdown", function (ev) {                          // クリック・タップでマスを選んだ：入力の向きは既定（右端から左へ）に戻る
+      if (!isCell(ev.target) || !S || S.done) return;
+      apply({ type: "focus", index: cellIndex(ev.target) }, cellIndex(ev.target));
+    });
     g.addEventListener("focusin", function (ev) {
       var t = ev.target;
       if (!isCell(t) || !S) return;
@@ -360,7 +364,7 @@
     $("bc-cellmsg").textContent = "";
     if (!o.counted) {                                                         // 空のマスがある：試行に数えない
       showFeedback("retry", o.head);
-      S.focus = lastEmptyFromRight(); refreshRows(); focusCell(S.focus);
+      S.focus = lastEmptyFromRight(); S.dir = "rtl"; refreshRows(); focusCell(S.focus);
       return;
     }
     S.sst[S.idx] = o.st;
@@ -368,7 +372,7 @@
     S.bad = {}; o.wrong.forEach(function (k) { S.bad[k] = true; });
     refreshRows(); renderSide();
     showFeedback("ng", o.head, o.detail, o.hint);
-    S.focus = o.wrong[o.wrong.length - 1]; refreshRows(); focusCell(S.focus);
+    S.focus = o.wrong[o.wrong.length - 1]; S.dir = "rtl"; refreshRows(); focusCell(S.focus);
   }
   function settle(st, o) {                                                     // 段が決まった（正解・値を見せた）
     var last = S.idx === S.stages.length - 1, head = o.head, detail = o.detail, kind, sum, ids, wasCleared;

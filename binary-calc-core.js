@@ -5,7 +5,7 @@
    ・記録のキーを csMathTrainer.binaryCalc.v1 に（CS Math Trainer 全体と衝突しない）
    ・補数の定義を紙（本番版）の文に．③ の語順を「① 補数を足す → はみ出した桁を無視 → ② 10進数で確かめる」に
    ・Minor-C：赤いマスの模範が 1 と 0 で混ざるときの繰り上がりのヒントを、規則を言う文に（A-c3）
-   ・まとめて入力（2 文字以上）は左端のマスから右へ配る
+   ・まとめて入力（2 文字以上）は読む順に右へ配る（行が空なら左端から，そうでなければフォーカスのマスから）．行ごとに入力の向き（rtl／ltr）を持つ
    ・「全部クリア」の判定と seenDef を持たない
    ============================================================ */
 var BinCalcCore = (function () {
@@ -446,44 +446,60 @@ var BinCalcCore = (function () {
     return msgStumbled(summary.stumbled.map(function (id) { return TEXT.stage[kind][id].name; }));
   }
 
-  /* ---- マスの操作（純粋関数）．row = { cells:[…], focus:i }．cells[0] が左端．マスは 1 ビット（0 か 1）だけ ---- */
+  /* ---- マスの操作（純粋関数）．row = { cells:[…], focus:i, dir:"rtl"|"ltr" }．cells[0] が左端．マスは 1 ビット（0 か 1）だけ ----
+     行ごとに「入力の向き」dir を持つ．
+       rtl（既定）：1 文字ずつ打つと，フォーカスのマス（最初は右端）に入って左へ進む（下の桁から上の桁へ，筆算の順）．
+       ltr        ：2 文字以上が一度に来た（IME の確定・insertText）あと．読む順（左から右）に続ける．
+     2 文字以上が一度に来たら，行が空なら左端から，そうでなければフォーカスのマスから，右へ読む順に配り，向きを ltr にする．
+     ltr の間は 1 文字入力も右へ進む（行末で止まる）．Backspace は左へ戻って消す．
+     rtl に戻るとき：Backspace／Delete で行が空になる（フォーカスは右端へ）・Home／End・クリック（ev.type "focus"）．
+     段が変わる・答え合わせのあと誤りのマスへ戻るときは，呼び出し側が dir を "rtl" にして渡す ---- */
   function normStr(s) { var t = String(s == null ? "" : s); try { t = t.normalize("NFKC"); } catch (e) { } return t; }
   function cellEdit(row, ev) {
-    var cells = row.cells.slice(), len = cells.length, f = Math.max(0, Math.min(len - 1, row.focus | 0));
-    var r = { cells: cells, focus: f, msg: "", note: "", submit: false, rejected: false, counted: true }, t, m, e, i;
+    var cells = row.cells.slice(), len = cells.length, f = Math.max(0, Math.min(len - 1, row.focus | 0)), dir = row.dir === "ltr" ? "ltr" : "rtl";
+    var r = { cells: cells, focus: f, dir: dir, msg: "", note: "", submit: false, rejected: false, counted: true }, t, m, e, i, start, empty;
     function clamp(i) { return Math.max(0, Math.min(len - 1, i)); }
     function reject(msg) { r.rejected = true; r.msg = msg; r.counted = false; }
-    if (ev.type === "focus") { f = clamp(ev.index | 0); }
+    function isEmpty() { for (var q = 0; q < len; q++) if (cells[q] !== "") return false; return true; }
+    if (ev.type === "focus") { f = clamp(ev.index | 0); dir = "rtl"; }                // クリックなどでフォーカスを動かした：向きは既定に戻る
     else if (ev.type === "paste") { reject(TEXT.msg.noPaste); }
     else if (ev.type === "input") {
       t = normStr(ev.value);
       m = t.replace(/[^01]/g, "");
       if (t === "") { /* 空の入力は何もしない */ }
       else if (m === "") reject(TEXT.msg.reject);
-      else if (m.length === 1) {                                  // 1 文字ずつ打つとき：フォーカスのマスに入れて左へ進む（左端では進まず上書き）
+      else if (m.length === 1) {                                  // 1 文字ずつ打つとき：フォーカスのマスに入れて，rtl なら左へ，ltr なら右へ進む（端では進まず上書き）
         cells[f] = m;
-        if (f > 0) f--;
+        if (dir === "ltr") { if (f < len - 1) f++; }
+        else if (f > 0) f--;
       }
-      else {                                                      // 2 文字以上が一度に来たとき（IME の確定・insertText）：読む順に，行の左端のマスから右へ順に配る
-        for (i = 0; i < m.length && i < len; i++) cells[i] = m.charAt(i);
-        if (m.length > len) r.note = TEXT.msg.overflow;           // 行の長さを超える分は捨てて知らせる
-        f = Math.min(m.length, len - 1);                          // 続きを打つマス：配ったすぐ右（全部埋まったら右端）
+      else {                                                      // 2 文字以上が一度に来たとき：読む順に右へ配る．行が空なら左端から，そうでなければフォーカスのマスから
+        start = isEmpty() ? 0 : f;
+        for (i = 0; i < m.length && start + i < len; i++) cells[start + i] = m.charAt(i);
+        if (start + m.length > len) r.note = TEXT.msg.overflow;   // 行の長さを超える分は捨てて知らせる
+        f = Math.min(start + m.length, len - 1);                  // 続きを打つマス：配ったすぐ右（全部埋まったら右端）
+        dir = "ltr";
       }
     }
     else if (ev.type === "key") {
       e = ev.key;
-      if (e === "Backspace") { if (cells[f] !== "") cells[f] = ""; else if (f < len - 1) { f++; cells[f] = ""; } }
-      else if (e === "Delete") { cells[f] = ""; }
+      if (e === "Backspace") {
+        if (cells[f] !== "") cells[f] = "";
+        else if (dir === "ltr") { if (f > 0) { f--; cells[f] = ""; } }                       // ltr：左へ戻って消す
+        else if (f < len - 1) { f++; cells[f] = ""; }                                           // rtl：右（先に打ったほう）を消す
+        if (isEmpty()) { dir = "rtl"; f = len - 1; }
+      }
+      else if (e === "Delete") { cells[f] = ""; if (isEmpty()) { dir = "rtl"; f = len - 1; } }
       else if (e === "ArrowLeft") { f = clamp(f - 1); }
       else if (e === "ArrowRight") { f = clamp(f + 1); }
-      else if (e === "Home") { f = 0; }
-      else if (e === "End") { f = len - 1; }
+      else if (e === "Home") { f = 0; dir = "rtl"; }
+      else if (e === "End") { f = len - 1; dir = "rtl"; }
       else if (e === "Enter") {
-        var emp = 0; for (i = 0; i < len; i++) if (cells[i] === "") emp++;
-        if (emp > 0) { r.msg = msgEmpty(emp); r.counted = false; } else r.submit = true;
+        empty = 0; for (i = 0; i < len; i++) if (cells[i] === "") empty++;
+        if (empty > 0) { r.msg = msgEmpty(empty); r.counted = false; } else r.submit = true;
       }
     }
-    r.focus = f;
+    r.focus = f; r.dir = dir;
     return r;
   }
   function cellLabel(rowName, digitFromRight, value) {                 // 画面読み上げ用（aria-label）
@@ -884,14 +900,15 @@ var BinCalcCore = (function () {
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "あ" }); check(r.rejected, "かなは捨てる");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "a1" }); check(r.cells[3] === "1", "混ざった入力の 1 は受ける");
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 0 }, { type: "input", value: "0" }); check(r.cells[0] === "0" && r.focus === 0, "左端では進まず上書き");
-      // 2 文字以上が一度に来たとき（IME の確定・insertText）：読む順（左から右）に，行の左端のマスから右へ順に配る．1 文字ずつ打つときは右端から左へ進む（上のとおり）
+      // 2 文字以上が一度に来たとき（IME の確定・insertText）：読む順（左から右）に右へ順に配る．行が空なら左端から，そうでなければフォーカスのマスから．1 文字ずつ打つときは右端から左へ進む（上のとおり）
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "１０１１" }); check(r.cells.join("") === "1011" && r.focus === 3 && r.note === "" && !r.rejected && r.counted, "全角で4桁の確定→左端から右へ読む順に配る " + r.cells.join(""));
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "111" }); check(r.cells.join("|") === "1|1|1|" && r.focus === 3 && r.note === "", "insertText の「111」は左の3マス");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "10110" }); check(r.cells.join("") === "1011" && r.note === TEXT.msg.overflow && r.focus === 3 && !r.rejected && r.counted, "行の幅を超える分は捨てて知らせる");
-      r = cellEdit({ cells: ["", "", "", ""], focus: 1 }, { type: "input", value: "101" }); check(r.cells.join("|") === "1|0|1|" && r.note === "" && r.focus === 3, "フォーカスの位置によらず左端から配る");
+      r = cellEdit({ cells: ["", "", "", ""], focus: 1 }, { type: "input", value: "101" }); check(r.cells.join("|") === "1|0|1|" && r.note === "" && r.focus === 3 && r.dir === "ltr", "行が空なら，フォーカスの位置によらず左端から配る");
       r = cellEdit({ cells: ["", "", "", ""], focus: 0 }, { type: "input", value: "0110" }); check(r.cells.join("") === "0110" && r.note === "", "左端にいても同じ");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "1 0 x1" }); check(r.cells.join("|") === "1|0|1|" && r.note === "", "0/1 以外は飛ばして配る");
-      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 3 }, { type: "input", value: "00" }); check(r.cells.join("") === "0011" && r.focus === 2, "既にある値は上書き（左端から）");
+      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 1 }, { type: "input", value: "00" }); check(r.cells.join("") === "1001" && r.focus === 3 && r.dir === "ltr" && r.note === "", "行が空でなければ，フォーカスのマスから右へ（既にある値は上書き）");
+      r = cellEdit({ cells: ["1", "1", "1", "1"], focus: 3 }, { type: "input", value: "00" }); check(r.cells.join("") === "1110" && r.note === TEXT.msg.overflow && r.focus === 3, "行が埋まっていて右端にいるときの 2 文字は，右端の 1 マスだけ入って，あふれた分は知らせる");
       r = cellEdit({ cells: ["", "", ""], focus: 2 }, { type: "input", value: "10" }); check(r.cells.join("|") === "1|0|" && r.focus === 2 && r.note === "", "2 文字は左の 2 マス");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "x1" }); check(r.cells.join("|") === "|||1" && r.focus === 2, "0/1 が 1 文字だけなら 1 文字ずつ打つのと同じ（右端から）");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "1" }); check(r.note === "", "1 文字なら知らせない");
@@ -901,6 +918,48 @@ var BinCalcCore = (function () {
         for (si = 0; si < 4; si++) { var rr1 = cellEdit(one, { type: "input", value: seqS[si] }); one = { cells: rr1.cells, focus: rr1.focus }; }
         check(one.cells.join("") === "1101" && one.focus === 0, "1 文字ずつ打つ：右端から入って左へ進む（これまでどおり）");
       }
+      // 行ごとの入力の向き（既定 rtl．まとめて入力のあとは ltr）
+      (function () {
+        function st(cells, focus, dir) { return { cells: cells, focus: focus, dir: dir }; }
+        function nx(row, ev) { var q = cellEdit(row, ev); return { cells: q.cells, focus: q.focus, dir: q.dir, note: q.note, rejected: q.rejected }; }
+        var w = st(["", "", "", ""], 3, undefined), q, ks, g;
+        check(cellEdit(w, { type: "input", value: "1" }).dir === "rtl", "向きの既定は rtl（1 文字ずつ）");
+        // 2 回に分けて確定：「10」→「11」で 1011．前の分を消さない
+        q = nx(w, { type: "input", value: "10" }); check(q.cells.join("|") === "1|0||" && q.focus === 2 && q.dir === "ltr", "まとめて入力（左端から）→ 向きは ltr，続きはすぐ右");
+        q = nx(q, { type: "input", value: "11" }); check(q.cells.join("") === "1011" && q.focus === 3 && q.dir === "ltr" && q.note === "", "2 回に分けて確定：「10」のあと「11」で 1011（前を消さない）");
+        // まとめて入力→1 文字ずつ：右へ進む（行末で止まる）
+        q = nx(w, { type: "input", value: "10" }); q = nx(q, { type: "input", value: "1" }); check(q.cells.join("|") === "1|0|1|" && q.focus === 3 && q.dir === "ltr", "まとめて入力のあとの 1 文字は右へ進む");
+        q = nx(q, { type: "input", value: "1" }); check(q.cells.join("") === "1011" && q.focus === 3, "行末で止まる（右端のマスに入る）");
+        q = nx(q, { type: "input", value: "0" }); check(q.cells.join("") === "1010" && q.focus === 3 && q.dir === "ltr", "行末ではさらに打つと右端を上書き");
+        // 3 回に分ける・1 文字→まとめて（rtl の途中でまとめて来る）
+        q = nx(st(["", "", "", "", "", "", "", ""], 7, "rtl"), { type: "input", value: "1" }); check(q.cells[7] === "1" && q.focus === 6 && q.dir === "rtl", "8 マス：1 文字ずつは右端から");
+        q = nx(q, { type: "input", value: "01" }); check(q.cells.join("|") === "||||||0|1" && q.focus === 7 && q.dir === "ltr", "1 文字のあとにまとめて入力：行が空でないので，フォーカスのマスから右へ");
+        // 行が空でないとき，フォーカスのマスから右へ配る（端を超える分は捨てて知らせる）
+        q = nx(st(["1", "", "", ""], 1, "rtl"), { type: "input", value: "01" }); check(q.cells.join("|") === "1|0|1|" && q.focus === 3 && q.dir === "ltr", "行が空でないと，フォーカスのマスから右へ");
+        q = nx(st(["1", "", "", ""], 2, "rtl"), { type: "input", value: "011" }); check(q.cells.join("|") === "1||0|1" && q.note === TEXT.msg.overflow && q.focus === 3, "フォーカスから右へ配って，行末を超える分は捨てて知らせる");
+        // Backspace：ltr では左へ戻って消す．行が空になったら rtl・右端へ戻る
+        q = nx(w, { type: "input", value: "10" });
+        q = nx(q, { type: "key", key: "Backspace" }); check(q.cells.join("|") === "1|||" && q.focus === 1 && q.dir === "ltr", "ltr の Backspace：左のマスを消して戻る");
+        q = nx(q, { type: "key", key: "Backspace" }); check(q.cells.join("") === "" && q.focus === 3 && q.dir === "rtl", "Backspace で行が空になる → rtl・右端に戻る");
+        q = nx(q, { type: "input", value: "1" }); check(q.cells.join("|") === "|||1" && q.focus === 2 && q.dir === "rtl", "戻ったあとの 1 文字は右端から（これまでどおり）");
+        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: "Delete" }); check(q.cells.join("|") === "1|0||" && q.focus === 2 && q.dir === "ltr", "Delete：行が空でなければ向きはそのまま");
+        q = nx(st(["", "", "1", ""], 2, "ltr"), { type: "key", key: "Delete" }); check(q.cells.join("") === "" && q.focus === 3 && q.dir === "rtl", "Delete で行が空になる → rtl");
+        // Home／End／クリック（focus）で rtl に戻る．矢印キーでは向きを変えない
+        ks = ["Home", "End"].map(function (kk) { return nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: kk }); });
+        check(ks[0].dir === "rtl" && ks[0].focus === 0 && ks[1].dir === "rtl" && ks[1].focus === 3, "Home・End で rtl に戻る");
+        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "focus", index: 1 }); check(q.dir === "rtl" && q.focus === 1 && q.cells.join("|") === "1|0||", "クリック（focus）で rtl に戻る（値は変わらない）");
+        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: "ArrowLeft" }); check(q.dir === "ltr" && q.focus === 1, "← は向きを変えない");
+        q = nx(st(["1", "0", "", ""], 1, "ltr"), { type: "key", key: "ArrowRight" }); check(q.dir === "ltr" && q.focus === 2, "→ は向きを変えない");
+        // Enter・貼り付け・捨てる入力では向きを変えない
+        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "key", key: "Enter" }); check(q.dir === "ltr", "Enter（空きあり）は向きを変えない");
+        q = nx(st(["1", "0", "", ""], 2, "ltr"), { type: "input", value: "9" }); check(q.dir === "ltr" && q.rejected, "捨てる入力は向きを変えない");
+        // 繰り上がり行（n−1 マス）・和の行（n+1 マス）でも同じ規則
+        q = nx(st(["", "", ""], 2, "rtl"), { type: "input", value: "10" }); check(q.cells.join("|") === "1|0|" && q.focus === 2 && q.dir === "ltr", "繰り上がりの行（3 マス）：まとめて入力");
+        q = nx(q, { type: "input", value: "1" }); check(q.cells.join("") === "101" && q.focus === 2, "繰り上がりの行：続きの 1 文字は右へ，行末で止まる");
+        q = nx(st(["", "", "", "", ""], 4, "rtl"), { type: "input", value: "10" }); q = nx(q, { type: "input", value: "01" }); check(q.cells.join("|") === "1|0|0|1|" && q.focus === 4, "和の行（5 マス）：2 回に分けて確定");
+        // 純粋性：向きを含めて入力の row を書き換えない
+        var rr0 = st(["", "", "", ""], 3, "ltr"); cellEdit(rr0, { type: "input", value: "11" }); check(rr0.cells.join("") === "" && rr0.focus === 3 && rr0.dir === "ltr", "row（向きを含む）を書き換えない");
+      })();
       r = cellEdit({ cells: ["1", "0", "1", "1"], focus: 2 }, { type: "key", key: "Backspace" }); check(r.cells[2] === "" && r.focus === 2, "Backspace（値あり）");
       r = cellEdit({ cells: ["1", "0", "", "1"], focus: 2 }, { type: "key", key: "Backspace" }); check(r.cells[3] === "" && r.focus === 3 && r.cells[0] === "1", "Backspace（空）は右のマスを消す");
       r = cellEdit({ cells: ["1", "0", "", ""], focus: 3 }, { type: "key", key: "Backspace" }); check(r.focus === 3, "右端の空で Backspace");
