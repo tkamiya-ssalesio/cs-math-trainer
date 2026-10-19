@@ -119,6 +119,7 @@ var BinCalcCore = (function () {
     // visual は画面側が組む絵の指定．rows の d は桁の文字列（空白は空き），hl は丸で囲む桁，slash は斜線を引く桁
     learn: {
       title: "2進数の計算の解説", prev: "前へ", next: "次へ", done: "完了", close: "メニューに戻る",
+      odo: { now: "今の距離", add: "足す", sum: "和", shown: "表示", noWindow: "左端の 1 は窓に出ない" },
       steps: [
         { title: "補数とは",
           text: ["<b>補数</b>：ある数に対し，足すと1桁増える最も小さな数．",
@@ -347,7 +348,7 @@ var BinCalcCore = (function () {
     return { x: xs, comp: cs, sum: ss, text: xs + "＋" + cs + "＝" + ss };
   }
   function decimalText(p) {                                          // ② 10進数で確かめる（紙の語順：① 補数を足す → はみ出した桁を無視 → ② 10進数で確かめる）
-    return "② 10進数で確かめると " + p.a + "−" + p.b + "＝" + (p.a - p.b) + "．答えの " + toBits(p.a - p.b, p.bits) + " は10進数の " + (p.a - p.b);
+    return "② 10進数で確かめると " + p.a + "−" + p.b + "＝" + (p.a - p.b) + "（" + toBits(p.a - p.b, p.bits) + "）";
   }
   function titleOf(p) {
     if (p.kind === "calc") return toBits(p.a, p.bits) + "＋" + toBits(p.b, p.bits);
@@ -722,7 +723,7 @@ var BinCalcCore = (function () {
         if (kind === "viacomp") {
           sh = ss[2].model;
           check(sh.length === n + 1 && sh[0] === "1" && BI("0b" + sh.slice(1).join("")) === BI(p.a) - BI(p.b), key + " 和の先頭・下の n 桁 " + p.key);
-          check(decimalText(p) === "② 10進数で確かめると " + p.a + "−" + p.b + "＝" + (p.a - p.b) + "．答えの " + pad(p.a - p.b, n) + " は10進数の " + (p.a - p.b), key + " 10進数の確認の式");
+          check(decimalText(p) === "② 10進数で確かめると " + p.a + "−" + p.b + "＝" + (p.a - p.b) + "（" + pad(p.a - p.b, n) + "）", key + " 10進数の確認の式");
         }
         // 5 ①は足し算だけ：引き算の段・マス・型が一度も出ない
         if (kind === "calc") {
@@ -973,7 +974,7 @@ var BinCalcCore = (function () {
           check(verifyOf(p).sum === f.sum && verifyOf(p).text === f.x + "＋" + f.ans + "＝" + f.sum, tag + "検算 " + verifyOf(p).text);
         } else {
           check(by.invert.model.join("") === f.inv && by.plus1.model.join("") === f.comp && by.sum.model.join("") === f.sum && by.ignore.model.join("") === f.ans, tag + "反転・補数・和・答え");
-          check(decimalText(p).replace("② 10進数で確かめると ", "").split("．")[0] === f.dec, tag + "10進の確認 " + decimalText(p));
+          check(decimalText(p).replace("② 10進数で確かめると ", "").split("（")[0] === f.dec && decimalText(p).indexOf("（" + f.ans + "）") > 0, tag + "10進の確認 " + decimalText(p));
         }
         ["carry", "add_ans", "invert", "plus1", "sum", "ignore"].forEach(function (id) { if (by[id]) check(sameArr(by[id].model, ref[id]), tag + id + " が独立な計算と不一致"); });
         check(f.bits >= 2 && f.bits <= 16, tag + "ビット数");
