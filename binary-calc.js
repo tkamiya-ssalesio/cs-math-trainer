@@ -9,12 +9,13 @@
    ============================================================ */
 (function () {
   var C = BinCalcCore, T = C.TEXT, U = T.ui, qs = window.location.search;
-  var SELFTEST = /[?&]selftest=1/.test(qs);
+  var SELFTEST = /[?&]selftest=1(?:&|$)/.test(qs);                // 値がちょうど 1 のときだけ（?selftest=10 などでは有効にならない）
 
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function bin(v, n) { var s = v.toString(2); while (s.length < n) s = "0" + s; return s; }
   var LEVEL_ID = { 4: "easy", 8: "medium" };
+  var MAX_INPUT = C.MAX_INPUT;                                 // 入力の長さの上限（コアと同じ値）
 
   /* ---- 画面の切り替え（app.js の showScreen には触らない．.screen をまとめて切り替える） ---- */
   function show(id) {
@@ -69,6 +70,7 @@
     var e = document.createElement("input");
     e.type = "text"; e.setAttribute("inputmode", "numeric"); e.setAttribute("autocomplete", "off");
     e.setAttribute("autocapitalize", "off"); e.setAttribute("enterkeyhint", "done"); e.spellcheck = false;
+    e.setAttribute("maxlength", String(MAX_INPUT));                        // 1 回に入る長さの上限（行は最大 16 マス．IME のまとめて入力が入る長さ）
     e.className = "bc-cell bc-in";
     e.setAttribute("data-i", String(i));
     return e;
@@ -326,14 +328,14 @@
       if (!isCell(t) || !S || S.done) return;
       if (ev.isComposing) return;                                              // 確定は compositionend で受ける
       if (performance.now() - compEnd.t < 40 && ev.data === compEnd.v) { refreshRows(); return; }   // 確定の二重受けは捨てる．ブラウザが入れた文字は描き直して消す
-      v = (ev.data != null && ev.inputType && ev.inputType.indexOf("insert") === 0) ? ev.data : t.value.slice(-1);   // 何桁かまとめて入る（insertText）ときは全部渡す
+      v = (ev.data != null && ev.inputType && ev.inputType.indexOf("insert") === 0) ? String(ev.data).slice(0, MAX_INPUT) : t.value.slice(-1);   // 何桁かまとめて入る（insertText）ときは渡す（長さの上限つき）
       apply({ type: "input", value: v }, cellIndex(t));
     });
     g.addEventListener("compositionend", function (ev) {
       var t = ev.target;
       if (!isCell(t) || !S || S.done) return;
       compEnd = { t: performance.now(), v: ev.data };
-      apply({ type: "input", value: ev.data || t.value.slice(-1) }, cellIndex(t));
+      apply({ type: "input", value: String(ev.data || "").slice(0, MAX_INPUT) || t.value.slice(-1) }, cellIndex(t));
     });
     ["paste", "cut", "drop"].forEach(function (name) {
       g.addEventListener(name, function (ev) {
@@ -536,6 +538,7 @@
     // メニューのカード
     $("bc-open-title").textContent = U.menuTitle; $("bc-open-desc").textContent = U.menuDesc;
     $("bc-open-btn").addEventListener("click", function () { renderSubmenu(); show("bc-submenu-screen"); });
+    if (SELFTEST) { $("bc-selftest-note").textContent = T.msg.selftestNote; $("bc-selftest-note").hidden = false; }     // 自己検査中は記録が保存されないことを画面の隅に出す
     // サブメニュー
     $("bc-submenu-title").textContent = U.submenuTitle;
     $("bc-action-label").textContent = U.actionLabel; $("bc-level-label").textContent = U.levelLabel; $("bc-level-note").textContent = U.levelNote;
@@ -629,7 +632,7 @@
           var k, a;
           for (k = 0; k < e.attributes.length; k++) {
             a = e.attributes[k];
-            if (/^(class|data-i|data-row|type|tabindex|inputmode|autocomplete|autocapitalize|enterkeyhint|spellcheck|disabled|viewbox|focusable|fill|stroke|stroke-width|x|y|width|height|rx|d)$/i.test(a.name)) continue;
+            if (/^(class|data-i|data-row|type|tabindex|inputmode|autocomplete|autocapitalize|enterkeyhint|spellcheck|maxlength|disabled|viewbox|focusable|fill|stroke|stroke-width|x|y|width|height|rx|d)$/i.test(a.name)) continue;
             if (a.name === "aria-label") { if (r.inputs.indexOf(e) >= 0 && /未入力$/.test(a.value)) continue; }
             found.push(sp.id + " の属性 " + a.name + "「" + a.value + "」");
           }

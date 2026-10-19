@@ -173,6 +173,7 @@ var BinCalcCore = (function () {
       retry: "おしい．もう1回やってみよう",
       rev: "正しい値はこれです．次へ進もう",
       reject: "0 か 1 を入れよう",
+      selftestNote: "自己検査中：記録は保存されません",
       overflow: "入りきらない分は捨てました",
       fixRed: "赤いマスだけ直そう",
       noPaste: "貼り付けはできません",
@@ -454,7 +455,8 @@ var BinCalcCore = (function () {
      ltr の間は 1 文字入力も右へ進む（行末で止まる）．Backspace は左へ戻って消す．
      rtl に戻るとき：Backspace／Delete で行が空になる（フォーカスは右端へ）・Home／End・クリック（ev.type "focus"）．
      段が変わる・答え合わせのあと誤りのマスへ戻るときは，呼び出し側が dir を "rtl" にして渡す ---- */
-  function normStr(s) { var t = String(s == null ? "" : s); try { t = t.normalize("NFKC"); } catch (e) { } return t; }
+  var MAX_INPUT = 64;                                                   // 1 回の入力で読む長さの上限（それより長い分は捨てる．行は最大 16 マス）
+  function normStr(s) { var t = String(s == null ? "" : s).slice(0, MAX_INPUT); try { t = t.normalize("NFKC"); } catch (e) { } return t.slice(0, MAX_INPUT); }
   function cellEdit(row, ev) {
     var cells = row.cells.slice(), len = cells.length, f = Math.max(0, Math.min(len - 1, row.focus | 0)), dir = row.dir === "ltr" ? "ltr" : "rtl";
     var r = { cells: cells, focus: f, dir: dir, msg: "", note: "", submit: false, rejected: false, counted: true }, t, m, e, i, start, empty;
@@ -537,7 +539,7 @@ var BinCalcCore = (function () {
         if (src.stage && typeof src.stage === "object") {
           STAGE_IDS[k].forEach(function (id) {
             var s = src.stage[id]; if (!s || typeof s !== "object") return;
-            var sn = clampInt(s.n);
+            var sn = Math.min(clampInt(s.n), c.tried);                    // 段の回数は，解いた問題の数を超えない
             c.stage[id] = { n: sn, miss1: Math.min(clampInt(s.miss1), sn), rev: Math.min(clampInt(s.rev), sn) };   // 誤りの数は回数を超えない
           });
         }
@@ -912,6 +914,8 @@ var BinCalcCore = (function () {
       r = cellEdit({ cells: ["", "", ""], focus: 2 }, { type: "input", value: "10" }); check(r.cells.join("|") === "1|0|" && r.focus === 2 && r.note === "", "2 文字は左の 2 マス");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "x1" }); check(r.cells.join("|") === "|||1" && r.focus === 2, "0/1 が 1 文字だけなら 1 文字ずつ打つのと同じ（右端から）");
       r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "1" }); check(r.note === "", "1 文字なら知らせない");
+      r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: "1011" + new Array(100000).join("x") + "1111" }); check(r.cells.join("") === "1011" && r.note === "" && !r.rejected, "巨大な入力（10 万文字）は先頭の 64 文字だけ読む（落ちない）");
+      r = cellEdit({ cells: ["", "", "", ""], focus: 3 }, { type: "input", value: new Array(65).join("x") + "1111" }); check(r.rejected && r.cells.join("") === "", "64 文字より後ろの 0・1 は読まない");
       r = cellEdit({ cells: ["", "", "", "", ""], focus: 4 }, { type: "input", value: "１１００００" }); check(r.cells.join("") === "11000" && r.note === TEXT.msg.overflow && r.focus === 4, "5 マスの行（和の行）でも同じ");
       {
         var one = { cells: ["", "", "", ""], focus: 3 }, seqS = ["1", "0", "1", "1"], si;
@@ -1000,8 +1004,12 @@ var BinCalcCore = (function () {
       check(c4.tried === 0 && c4.perfect === 0 && c4.streak === CLEAR_STREAK.calc && c4.cleared === false && c4.stage.carry.n === 0 && c4.stage.carry.miss1 === 0 && c4.stage.carry.rev === 0 && !("nonsense" in c4.stage) && !("extra9" in l.rec.rec) && l.rec.sel.kind === "calc" && l.rec.sel.bits === 4, "負の数・巨大な数・知らない項目の丸め");
       store[STORAGE_KEY] = JSON.stringify({ v: 1, rec: { viacomp4: { streak: 99, cleared: true }, comp8: { streak: 2 }, calc4: { streak: 1e300 } } });
       l = loadRec(ms); check(l.rec.rec.viacomp4.streak === CLEAR_STREAK.viacomp && l.rec.rec.comp8.streak === 2 && l.rec.rec.calc4.streak === CLEAR_STREAK.calc && l.rec.rec.viacomp4.cleared === true, "連続の巨大な値は ✓ に要る本数で丸める（クリアは残る）");
-      store[STORAGE_KEY] = JSON.stringify({ v: 1, rec: { calc4: { stage: { carry: { n: 5, miss1: 9, rev: 7 }, add_ans: { n: 5, miss1: 2, rev: 1 } } } } });
+      store[STORAGE_KEY] = JSON.stringify({ v: 1, rec: { calc4: { tried: 5, stage: { carry: { n: 5, miss1: 9, rev: 7 }, add_ans: { n: 5, miss1: 2, rev: 1 } } } } });
       l = loadRec(ms); check(l.rec.rec.calc4.stage.carry.miss1 === 5 && l.rec.rec.calc4.stage.carry.rev === 5 && l.rec.rec.calc4.stage.add_ans.miss1 === 2 && l.rec.rec.calc4.stage.add_ans.rev === 1, "誤りの数は回数を超えない");
+      store[STORAGE_KEY] = JSON.stringify({ v: 1, rec: { calc4: { tried: 3, perfect: 3, stage: { carry: { n: 1000000, miss1: 1000000, rev: 1000000 }, add_ans: { n: 2, miss1: 1, rev: 0 } } } } });
+      l = loadRec(ms); check(l.rec.rec.calc4.stage.carry.n === 3 && l.rec.rec.calc4.stage.carry.miss1 === 3 && l.rec.rec.calc4.stage.carry.rev === 3 && l.rec.rec.calc4.stage.add_ans.n === 2, "段の回数は解いた問題の数（tried）で頭打ち");
+      store[STORAGE_KEY] = JSON.stringify({ v: 1, rec: { calc4: { stage: { carry: { n: 7, miss1: 7, rev: 7 } } } } });
+      l = loadRec(ms); check(l.rec.rec.calc4.tried === 0 && l.rec.rec.calc4.stage.carry.n === 0 && l.rec.rec.calc4.stage.carry.miss1 === 0, "tried が 0 なら段の回数も 0（weakestStage の割合が 100% を超えない）");
       // 壊れた値・配列・文字列・巨大な値・入れ子：落ちない
       ["[]", "\"str\"", "123", "true", "{\"v\":1,\"rec\":[]}", "{\"v\":1,\"rec\":{\"calc4\":[]}}", "{\"v\":1,\"rec\":{\"calc4\":{\"stage\":[]}}}", "{\"v\":1,\"sel\":[]}",
        "{\"v\":1,\"rec\":{\"calc4\":{\"tried\":1e308,\"perfect\":1e308,\"stage\":{\"carry\":{\"n\":1e308,\"miss1\":1e308,\"rev\":1e308}}}}}", "{\"v\":1,\"rec\":{\"__proto__\":{\"calc4\":1},\"constructor\":1}}"].forEach(function (txt, qi) {
@@ -1143,7 +1151,7 @@ var BinCalcCore = (function () {
   }
 
   return {
-    KINDS: KINDS, BITS: BITS, CLEAR_STREAK: CLEAR_STREAK, STAGE_IDS: STAGE_IDS, STORAGE_KEY: STORAGE_KEY,
+    MAX_INPUT: MAX_INPUT, KINDS: KINDS, BITS: BITS, CLEAR_STREAK: CLEAR_STREAK, STAGE_IDS: STAGE_IDS, STORAGE_KEY: STORAGE_KEY,
     BANNED_ALL: BANNED_ALL, BANNED_SCREEN: BANNED_SCREEN, DEF_ONLY_TERMS: DEF_ONLY_TERMS, BANNED_BORROW: BANNED_BORROW, TEXT: TEXT, HINTS: HINTS, FIXTURES: FIXTURES, EXPECTED_POOLS: EXPECTED_POOLS,
     setSeed: setSeed, gen: gen, makeProblem: makeProblem, problemOfFixture: problemOfFixture, stagesOf: stagesOf, verifyOf: verifyOf, decimalText: decimalText, titleOf: titleOf,
     judgeStage: judgeStage, diagnose: diagnose, describeWrong: describeWrong, newStageState: newStageState, advance: advance, attempt: attempt,
