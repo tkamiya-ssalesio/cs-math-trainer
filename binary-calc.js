@@ -679,12 +679,12 @@
       });
     }
     function pos() { var g = $("bc-grid").getBoundingClientRect(), q = $("bc-qtitle").getBoundingClientRect(); return [g.top, g.bottom, q.top, q.bottom]; }
-    function checkSteady() {                               // 答え合わせの前後で，筆算と題の位置が動かない（上寄せ）
+    function checkSteady() {                               // 答え合わせの前後で，筆算と題の位置が動かない（上寄せ．筆算と手順が左右に並ぶ幅 60rem 超のとき．縦に並べる狭い画面では検算の行が題の上に入るので，動きを数えるだけ）
       var a = pos(), b, d, k;
       check(); b = pos(); d = 0;
       for (k = 0; k < 4; k++) d = Math.max(d, Math.abs(a[k] - b[k]));
       out.layout.maxShift = Math.max(out.layout.maxShift || 0, d);
-      out.checked++; if (d > 2) fail("答え合わせの前後で筆算・題の位置が " + d.toFixed(1) + "px 動く：" + C.titleOf(S.p));
+      out.checked++; if (d > 2 && innerWidth > 960) fail("答え合わせの前後で筆算・題の位置が " + d.toFixed(1) + "px 動く：" + C.titleOf(S.p));
     }
     function runProblem(mode, n) {
       var st = S.stages, si, j, nWrong, model, kinds = ["all", "last"];
