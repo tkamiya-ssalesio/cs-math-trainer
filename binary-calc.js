@@ -461,9 +461,9 @@
   function openReset() { $("bc-reset-confirm").hidden = false; $("bc-reset-no").focus(); }
   function closeReset(back) { $("bc-reset-confirm").hidden = true; if (back) $("bc-reset-btn").focus(); }
   function doReset() {
-    var kind = sel.kind;
+    var kind = sel.kind, bits = sel.bits;                     // 消しても，いま選んでいる種類・難易度は保つ
     if (storage) C.clearRec(storage);
-    rec = C.newRec(); sel = rec.sel; sel.kind = kind; lastP = null; S = null;
+    rec = C.newRec(); sel = rec.sel; sel.kind = kind; sel.bits = bits; lastP = null; S = null;
     closeReset(false);
     renderPlayControls(); renderSubmenu(); newProblem();
   }
@@ -774,6 +774,21 @@
       out.checked += 2; if (!found || leaks().length) fail("答えの先出しの検査が働かない");
     })();
     appHits("練習・解説の描画後");
+    (function () {                                       // 「記録を消す」のあとも，選んでいた種類・難易度（ビット数）が保たれる
+      var combos = [["calc", 8], ["comp", 8], ["viacomp", 4], ["comp", 4]], i, kk, bb, c;
+      for (i = 0; i < combos.length; i++) {
+        kk = combos[i][0]; bb = combos[i][1];
+        choose(kk, bb);
+        if (S) { S.done = false; }
+        $("bc-reset-btn").click(); $("bc-reset-yes").click();
+        c = rec.rec[C.comboKey(kk, bb)];
+        out.checked += 4;
+        if (sel.kind !== kk || sel.bits !== bb) fail("記録を消したあと，選択が " + sel.kind + "/" + sel.bits + " に変わった（" + kk + "/" + bb + " のはず）");
+        if (c.tried !== 0 || c.streak !== 0) fail("記録を消したのに記録が残っている");
+        if (!S || S.p.kind !== kk || S.p.bits !== bb) fail("記録を消したあとの問題が " + kk + "/" + bb + " でない");
+        if (document.querySelector("#bc-bitsw [aria-pressed=true]").getAttribute("data-bits") !== String(bb)) fail("記録を消したあと，難易度のボタンの表示が変わった");
+      }
+    })();
     $("bc-reset-confirm").hidden = false; audit1("記録を消す確認"); $("bc-reset-confirm").hidden = true;
     $("bc-mine").open = true; audit1("きみの記録"); $("bc-mine").open = false;
     S = null; lastP = null; renderSubmenu(); show("menu-screen");
