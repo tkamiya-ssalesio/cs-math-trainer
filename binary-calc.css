@@ -143,6 +143,7 @@ input.bc-cell.bc-in { caret-color: transparent; }
 .bc-tutorial .bc-vc { width: 1.95rem; height: 2.25rem; font-size: 1.4rem; }
 .bc-learn-h { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.4rem; }
 .bc-learn-p { margin-bottom: 0.3rem; }
+.bc-learn-p .bc-nb { white-space: nowrap; }                /* 短い太字（「1 km 減る」など）を行末で割らない */
 .bc-vis { display: grid; gap: 0.35rem; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; max-width: 100%; }
 .bc-vrow { display: grid; grid-template-columns: 7.5rem 1.4rem max-content minmax(0, auto); align-items: center; column-gap: 0.5rem; }
 .bc-vlab { font-family: var(--font-main); font-size: 0.8rem; color: var(--text-secondary); text-align: right; line-height: 1.2; }

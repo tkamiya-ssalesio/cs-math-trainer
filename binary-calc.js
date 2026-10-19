@@ -476,7 +476,7 @@
   function richText(host, str) {                              // <b>…</b> だけを太字にする（それ以外のタグは使わない）
     String(str).split(/(<b>.*?<\/b>)/).forEach(function (part) {
       var m = /^<b>(.*)<\/b>$/.exec(part);
-      if (m) host.appendChild(el("strong", "", m[1]));
+      if (m) host.appendChild(el("strong", m[1].length <= 12 ? "bc-nb" : "", m[1]));   // 短い太字（「1 km 減る」など）は行末で割らない．長い太字は折り返してよい
       else if (part) host.appendChild(document.createTextNode(part));
     });
   }
@@ -759,7 +759,10 @@
           var L = out.layout, h = document.documentElement.scrollHeight, nb = $("bc-learn-next").getBoundingClientRect().bottom, cb = $("bc-learn-close").getBoundingClientRect().bottom;
           L.learnSteps = (L.learnSteps || 0) + 1; L.learnMaxClose = Math.max(L.learnMaxClose || 0, cb);
           if (h > innerHeight) L.learnTaller = (L.learnTaller || 0) + 1;
+          var ch = $("bc-tutorial-card").getBoundingClientRect().height;      // カードの高さはどのステップでも同じ（ステップを進めるたびにパネルが動かない）
+          L.learnCardMin = Math.min(L.learnCardMin || ch, ch); L.learnCardMax = Math.max(L.learnCardMax || 0, ch);
           out.checked++;
+          if (innerWidth >= 1024 && Math.abs(L.learnCardMax - L.learnCardMin) > 1) fail("解説 " + (i + 1) + "：カードの高さがそろわない（" + L.learnCardMin.toFixed(1) + "〜" + L.learnCardMax.toFixed(1) + "px）");
           if (innerWidth >= 1280 && innerHeight >= 768 && (h > innerHeight || nb > innerHeight || cb > innerHeight)) fail("解説 " + (i + 1) + "：スクロールが出る（文書の高さ " + h + "／窓 " + innerHeight + "）");
         })();
       }
