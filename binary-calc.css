@@ -1,7 +1,7 @@
 /* ============================================================
    2進数の計算（足し算・補数）— CS Math Trainer の 4 つ目のカテゴリ
    style.css の変数（--accent-* / --panel-* / --text-* / --font-main）と部品（.card-btn / .btn-primary / .btn-secondary /
-   .modal-diff-tab-btn / .tutorial-* / .step-dot / .section-title）をそのまま使う．既存のクラス・規則は上書きしない
+   .tutorial-* / .step-dot / .section-title）をそのまま使う（app.js が掴むクラス・属性は使わない：.modal-diff-tab-btn・data-diff・.category-select-btn・.submenu-action-btn など）．既存のクラス・規則は上書きしない
    （新しいクラスはすべて bc- で始める．.app-container への変更は .bc-compact（練習画面）のときだけ）
    ============================================================ */
 
@@ -21,6 +21,12 @@
 .bc-tick { font-size: 0.72rem; color: var(--text-secondary); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.05rem 0.6rem; white-space: nowrap; }
 .bc-tick .bc-mk { font-weight: 700; }
 .bc-tick.bc-done { color: var(--accent-green); border-color: rgba(57, 255, 20, 0.45); background: rgba(57, 255, 20, 0.08); }
+.bc-diffsel { display: flex; gap: 0.6rem; }
+.bc-diff-btn { flex: 1; appearance: none; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.6rem 0; color: var(--text-primary); font-family: var(--font-main); font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: var(--transition-smooth); text-align: center; line-height: 1.3; }
+.bc-diff-btn:hover { background: rgba(255, 255, 255, 0.05); }
+.bc-diff-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+.bc-diff-btn.bc-sel[data-level="easy"] { border-color: var(--accent-green); color: var(--accent-green); box-shadow: 0 0 15px rgba(57, 255, 20, 0.15); background: rgba(57, 255, 20, 0.03); }
+.bc-diff-btn.bc-sel[data-level="medium"] { border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15); background: rgba(0, 242, 254, 0.03); }
 .bc-diffsub { font-size: 0.7rem; opacity: 0.8; }
 
 /* ---- 練習：上の行（戻る・種類・難易度） ---- */

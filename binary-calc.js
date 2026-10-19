@@ -179,8 +179,8 @@
     var d = $("bc-diff"), ticks = document.querySelectorAll(".bc-ticks");
     if (!d.firstChild) {
       C.BITS.forEach(function (bits) {
-        var bt = el("button", "modal-diff-tab-btn"); bt.type = "button";
-        bt.setAttribute("data-diff", LEVEL_ID[bits]); bt.setAttribute("data-bits", String(bits));
+        var bt = el("button", "bc-diff-btn"); bt.type = "button";               // 既存の .modal-diff-tab-btn（app.js が掴む）は使わない
+        bt.setAttribute("data-bits", String(bits)); bt.setAttribute("data-level", LEVEL_ID[bits]);
         bt.appendChild(document.createTextNode(T.level[bits])); bt.appendChild(document.createElement("br"));
         bt.appendChild(el("span", "bc-diffsub", T.bits[bits]));
         bt.addEventListener("click", function () { sel.bits = bits; persist(); renderSubmenu(); });
@@ -189,7 +189,7 @@
     }
     Array.prototype.forEach.call(d.children, function (bt) {
       var on = bt.getAttribute("data-bits") === String(sel.bits);
-      bt.classList.toggle("selected", on); bt.setAttribute("aria-pressed", on ? "true" : "false");
+      bt.classList.toggle("bc-sel", on); bt.setAttribute("aria-pressed", on ? "true" : "false");
     });
     Array.prototype.forEach.call(ticks, function (host) {
       var kind = host.getAttribute("data-kind");
@@ -584,6 +584,13 @@
     var out = { combos: 0, problems: 0, states: 0, checked: 0, fail: 0, failures: [], layout: { vw: innerWidth, vh: innerHeight, states: 0, maxDoc: 0, maxBtn: 0, maxGrid: 0, maxPanel: 0, taller: 0, overX: 0 } }, seen = {};
     var MINE = "#bc-open-btn, #bc-submenu-screen, #bc-learn-screen, #bc-play-screen";
     function fail(m) { out.fail++; if (out.failures.length < 20) out.failures.push(m); }
+    // app.js が DOMContentLoaded で掴む（querySelector／querySelectorAll）クラス・属性。新カテゴリの要素がこれに当たると，app.js の状態が動く
+    var APP_SEL = ".category-select-btn, .submenu-action-btn, .modal-diff-tab-btn, .modal-mode-btn, .timer-container, .bit-switch, .weight-tag, .learn-tabs .diff-btn, .diff-btn, [data-diff], [data-mode], [data-tab]";
+    function appHits(label) {
+      var mine = document.querySelectorAll("#bc-open-btn, #bc-open-btn *, #bc-submenu-screen, #bc-submenu-screen *, #bc-learn-screen, #bc-learn-screen *, #bc-play-screen, #bc-play-screen *"), i, hit = 0;
+      for (i = 0; i < mine.length; i++) if (mine[i].matches(APP_SEL)) hit++;
+      out.checked++; if (hit) fail(label + "：新カテゴリの要素 " + hit + " 個が既存の app.js の対象（" + APP_SEL + "）に当たる");
+    }
     function mineClone(dropDefs) {                       // このカテゴリの画面だけを写す
       var wrap = document.createElement("div"), list = document.querySelectorAll(MINE);
       Array.prototype.forEach.call(list, function (n) { wrap.appendChild(n.cloneNode(true)); });
@@ -698,7 +705,30 @@
       $("bc-open-btn").click();
       if (!isActive("bc-submenu-screen") || $("menu-screen").classList.contains("active")) fail("新カテゴリ：サブメニューへ進まない");
       if ($("bc-submenu-screen").querySelectorAll(".bc-action-btn").length !== 4) fail("新カテゴリのサブメニューのボタンが 4 つでない");
-      if ($("bc-diff").querySelectorAll("button").length !== 2 || $("bc-diff").querySelector("[data-diff=hard]")) fail("難易度が初級・中級の 2 つだけでない（上級が選べる）");
+      if ($("bc-diff").querySelectorAll("button").length !== 2 || $("bc-diff").querySelector("[data-level=hard], [data-bits='16']")) fail("難易度が初級・中級の 2 つだけでない（上級が選べる）");
+      // 既存の設定モーダルの難易度を，新カテゴリの操作で動かさない（app.js が DOMContentLoaded で掴むクラス・属性・id を，新カテゴリの要素が持たない）
+      (function () {
+        var APP_IDS = ["menu-screen", "submenu-screen", "game-screen", "result-screen", "learn-screen", "settings-modal", "timer-bar", "combo-display", "answer-input", "submit-btn", "quit-btn", "restart-btn", "back-to-menu-btn",
+                       "submenu-title", "play-a-title", "play-b-title", "play-mix-title", "submenu-back-btn", "modal-cancel-btn", "modal-start-btn", "question-text", "question-mode-label", "question-progress", "game-progress-label",
+                       "game-score-label", "game-score", "question-card", "bit-input-area", "text-input-area", "binary-input-tip", "char-counter", "result-score", "result-rank", "result-accuracy", "result-max-combo", "review-list",
+                       "result-title", "result-meta", "learn-close-btn", "learn-prev-btn", "learn-next-btn", "tutorial-card", "step-indicators"];
+        var i, ids = {}, dup = 0, all = document.querySelectorAll("[id]"), sels, before, tabs, k, bad;
+        out.checked += 4;
+        appHits("開始時");
+        for (i = 0; i < all.length; i++) { if (ids[all[i].id]) dup++; ids[all[i].id] = 1; }
+        if (dup) fail("id が重複している（" + dup + "）");
+        for (i = 0; i < APP_IDS.length; i++) if (!$(APP_IDS[i])) fail("app.js が使う id #" + APP_IDS[i] + " が無い");
+        for (i = 0; i < all.length; i++) if (APP_IDS.indexOf(all[i].id) < 0 && /^(menu|submenu|game|result|learn|settings|modal|timer|combo|answer|submit|quit|restart|question|review|tutorial|step)[-_]/.test(all[i].id) && !/^bc-/.test(all[i].id)) fail("既存の命名の id が増えている #" + all[i].id);
+        // 難易度を押す：既存の設定モーダルの選択が動かない
+        tabs = document.querySelectorAll(".modal-diff-tab-btn");
+        before = Array.prototype.map.call(tabs, function (t) { return t.dataset.diff + ":" + t.classList.contains("selected"); }).join(",");
+        if (tabs.length !== 3 || before !== "easy:false,medium:true,hard:false") fail("既存の設定モーダルの難易度の初期状態が違う " + before);
+        sels = $("bc-diff").querySelectorAll("button"); bad = 0;
+        for (k = 0; k < sels.length; k++) { sels[k].click(); if (Array.prototype.map.call(document.querySelectorAll(".modal-diff-tab-btn"), function (t) { return t.dataset.diff + ":" + t.classList.contains("selected"); }).join(",") !== before) bad++; }
+        for (k = sels.length - 1; k >= 0; k--) { sels[k].click(); }
+        if (bad) fail("新カテゴリの難易度を押すと，既存の設定モーダルの選択が変わる");
+        if (document.querySelectorAll(".modal-diff-tab-btn.selected").length !== 1) fail("既存の設定モーダルで選択中の難易度が 1 つでない");
+      })();
       $("bc-submenu-back-btn").click();
       if (!$("menu-screen").classList.contains("active") || isActive("bc-submenu-screen")) fail("新カテゴリ：メニューへ戻らない");
       noScrollX("メニュー");
@@ -730,6 +760,7 @@
       r.statics[1].setAttribute("title", "0100"); found = found && leaks().length > 0; r.statics[1].removeAttribute("title");
       out.checked += 2; if (!found || leaks().length) fail("答えの先出しの検査が働かない");
     })();
+    appHits("練習・解説の描画後");
     $("bc-reset-confirm").hidden = false; audit1("記録を消す確認"); $("bc-reset-confirm").hidden = true;
     $("bc-mine").open = true; audit1("きみの記録"); $("bc-mine").open = false;
     S = null; lastP = null; renderSubmenu(); show("menu-screen");
