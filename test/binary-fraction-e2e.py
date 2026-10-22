@@ -392,7 +392,7 @@ def run_storage(b):
         t = pg.inner_text('#bf-qtitle'); rec(t != '', '壊れた記録でも開く %r' % sv[:30])
         pg.click('#bf-mine-sum'); txt = pg.inner_text('#bf-mine-body'); rec('NaN' not in txt and 'undefined' not in txt, '壊れた記録の表示 %r' % txt[:80]); pg.click('#bf-mine-sum')
     # localStorage が使えない・書けない端末
-    ctx2 = new_ctx(b, 1366, 768); p2 = ctx2.new_page(); e2 = []
+    ctx2 = new_ctx(b, 1366, 768); p2 = ctx2.new_page(); e2 = []; p2._errs = e2
     p2.on('pageerror', lambda e: e2.append(str(e)))
     p2.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}})")
     goto_ok(p2, URL); open_bf(p2); p2.click('.bf-action-btn[data-action=b2d]'); E2 = Env(p2, ctx2.new_cdp_session(p2))
@@ -403,7 +403,7 @@ def run_storage(b):
     rec(not e2, 'localStorage が使えない端末でエラー %s' % e2[:2])
     ctx2.close()
     # 容量超過（setItem が投げる）
-    ctx3 = new_ctx(b, 1366, 768); p3 = ctx3.new_page(); e3 = []
+    ctx3 = new_ctx(b, 1366, 768); p3 = ctx3.new_page(); e3 = []; p3._errs = e3
     p3.on('pageerror', lambda e: e3.append(str(e)))
     p3.add_init_script("Storage.prototype.setItem=function(){throw new DOMException('quota','QuotaExceededError')}")
     goto_ok(p3, URL); open_bf(p3); p3.click('.bf-action-btn[data-action=d2b]')
