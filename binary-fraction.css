@@ -18,6 +18,10 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 .bf-note.bf-warn { color: var(--accent-red); font-weight: 700; }
 [hidden] { display: none !important; }
 
+/* ---- メニュー（カードが 5 枚になったので，1366×768・1280×800・1024×768 の高さに収まるよう，カードの余白と間隔を詰める．.mode-grid の中に 5 つ目のカード #bf-open-btn があるときだけ効く．style.css は変えない） ---- */
+#menu-screen .mode-grid:has(> #bf-open-btn) { gap: 0.7rem !important; }
+#menu-screen .mode-grid:has(> #bf-open-btn) > .card-btn { padding: 0.8rem 1.2rem; gap: 0.25rem; }
+
 /* ---- サブメニュー ---- */
 .bf-ticks { display: flex; gap: 0.5rem; margin-top: 0.1rem; flex-wrap: wrap; }
 .bf-tick { font-size: 0.72rem; color: var(--text-secondary); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.05rem 0.6rem; white-space: nowrap; }
@@ -46,11 +50,13 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 /* ---- 練習：左に作業用紙，右に手順 ---- */
 .bf-panel { margin-top: 0.6rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 1rem 1.4rem; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.75rem 1.6rem; align-items: start; }
 .bf-work { min-width: 0; }
-.bf-side { min-width: 0; display: grid; align-content: start; gap: 0.5rem; }
-.bf-sidemain, .bf-sideres { min-width: 0; display: grid; align-content: start; gap: 0.5rem; }
+.bf-side { min-width: 0; display: grid; align-content: start; gap: 0.4rem; }
+.bf-sidemain, .bf-sideres { min-width: 0; display: grid; align-content: start; gap: 0.4rem; }
 
-.bf-sheet { --cw: 4.1rem; --dw: 1.2rem; --lab: 3.8rem; --ch: 2.6rem; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; }
+.bf-sheet { --cw: 4.7rem; --dw: 1.2rem; --lab: 3.4rem; --ch: 2.6rem; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; }
 .bf-rlab { font-family: var(--font-main); font-size: 0.85rem; line-height: 1.25; color: var(--text-secondary); }
+
+.bf-panel.bf-p-wide .bf-sheet { --cw: 4.5rem; --lab: 3rem; }                 /* 位取りの表が 6 桁以上：手順の欄の幅を稼ぐ（0.0625 は 4.3rem で入る） */
 
 /* 入力欄の共通 */
 .bf-in { appearance: none; box-sizing: border-box; height: var(--ch); font-family: inherit; font-weight: 700; font-size: 1.35rem; line-height: 1; text-align: center; padding: 0 0.2rem; color: var(--text-primary); background: rgba(255, 255, 255, 0.04); border: 2px solid var(--panel-border); border-radius: 8px; outline: none; min-width: 0; }
@@ -96,16 +102,17 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 .bf-bd { height: 2.2rem; font-size: 1.5rem; font-weight: 800; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); border-radius: 8px; width: 100%; }
 .bf-gap.bf-bn { font-size: 1.5rem; font-weight: 800; }
 .bf-vd { width: 100%; }
-.bf-vd .bf-in { width: 100%; font-size: 1.2rem; }
+.bf-vd .bf-in { width: 100%; font-size: 1.05rem; padding: 0 0.1rem; }                /* 最長の値 0.0625（6 文字）が欠けない幅 */
 .bf-zero { color: var(--text-secondary); font-size: 1.3rem; height: var(--ch); border: 2px dashed var(--panel-border); border-radius: 8px; width: 100%; }
-.bf-sumrow { display: flex; align-items: center; gap: 0.5rem; min-height: var(--ch); border-top: 2px dashed var(--panel-border); padding-top: 0.45rem; }
-.bf-expr { font-size: 1.15rem; font-weight: 700; white-space: nowrap; }
+.bf-sumrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; min-height: var(--ch); border-top: 2px dashed var(--panel-border); padding-top: 0.45rem; width: 0; min-width: 100%; }   /* 表の幅を超えない（式は折り返す）．width: 0 で，作業用紙の幅を決める計算に入れない */
+.bf-expr { font-size: 1.1rem; font-weight: 700; white-space: normal; flex: 1 1 100%; min-width: 0; min-height: 1.6rem; overflow-wrap: anywhere; }   /* 式が出る前から 1 行ぶんの高さを取る（式が出ても作業用紙が動かない） */
 .bf-sumrow .bf-in { width: 8.5rem; flex: none; }
 
 /* ---- 右：題・手順 ---- */
 .bf-qhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.2rem 1rem; }
 .bf-qtitle { font-family: "BIZ UDGothic", "Osaka-Mono", ui-monospace, "Menlo", "Consolas", monospace; font-size: 1.5rem; font-weight: 800; line-height: 1.4; }
-.bf-base { font-size: 0.55em; font-weight: 700; vertical-align: sub; line-height: 0; }
+.bf-base { font-size: 0.75em; font-weight: 700; vertical-align: sub; line-height: 0; }           /* 基数の添字（紙の ₍₂₎）．解説も題も同じ下付き */
+.bf-qtitle .bf-base { font-size: 0.55em; }
 .bf-qkind { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3; margin-top: -0.3rem; }
 .bf-streak { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-secondary); }
 .bf-dot-s { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid var(--accent-cyan); background: transparent; display: inline-block; }
@@ -147,7 +154,7 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 .bf-mine td.bf-num, .bf-mine th.bf-num { text-align: right; font-variant-numeric: tabular-nums; }
 .bf-weak { background: rgba(254, 193, 7, 0.18); color: var(--accent-yellow); border-radius: 4px; padding: 0 0.4rem; font-weight: 700; }
 .bf-foot { text-align: right; }
-.bf-confirm { margin-top: 0.5rem; background: rgba(255, 51, 102, 0.08); border: 1px solid var(--accent-red); border-radius: 12px; padding: 0.6rem 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.bf-confirm { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 20; width: max-content; max-width: 92vw; background: #2a1420; border: 1px solid var(--accent-red); border-radius: 12px; padding: 0.6rem 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); }   /* 画面の下に重ねて出す（出しても文書の高さが変わらない） */
 .bf-confirm p { font-weight: 700; font-size: 0.9rem; }
 .bf-selftest-note { pointer-events: none; position: fixed; left: 0.6rem; bottom: 0.5rem; z-index: 5; margin: 0; padding: 0.15rem 0.7rem; font-size: 0.75rem; font-weight: 700; color: var(--accent-yellow); background: rgba(0, 0, 0, 0.75); border: 1px solid rgba(254, 193, 7, 0.55); border-radius: 999px; }
 .bf-selftest { background: #000; color: #8f8; border-radius: 10px; padding: 0.75rem; overflow-x: auto; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-top: 0.8rem; }
@@ -203,11 +210,12 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
   .bf-line { flex-wrap: wrap; gap: 0.4rem; }
   .bf-in.bf-bit { width: 2.3rem; }
   .bf-bits { gap: 0.2rem; }
-  .bf-sumrow { flex-wrap: wrap; }
-  .bf-expr { white-space: normal; font-size: 1rem; }
+  .bf-expr { font-size: 1rem; }
 }
 @media (max-width: 52rem) {
-  .bf-vis { --vcw: 3.6rem; --vsep: 1.7rem; --vlab: 4.8rem; }
+  .bf-vis { --vcw: 3.8rem; --vsep: 1.7rem; --vlab: 4.6rem; }
+  .bf-vc { font-size: 1.05rem; }
+  .bf-vc.bf-vlong { font-size: 0.9rem; }
   .app-container.bf-learn { padding: 1rem 1rem 1.1rem; }
   .bf-tutorial { padding: 1rem 1rem; }
 }

@@ -19,10 +19,11 @@
 
   /* ---- 文字の組み立て：<b>…</b> は太字，^{…} は上付き（それ以外のタグは使わない） ---- */
   function richText(host, str) {
-    String(str).split(/(<b>[^<]*<\/b>|\^\{[^}]*\})/).forEach(function (part) {
-      var m = /^<b>([^<]*)<\/b>$/.exec(part), q = /^\^\{([^}]*)\}$/.exec(part);
+    String(str).split(/(<b>[^<]*<\/b>|[\^_]\{[^}]*\})/).forEach(function (part) {
+      var m = /^<b>([^<]*)<\/b>$/.exec(part), q = /^\^\{([^}]*)\}$/.exec(part), u = /^_\{([^}]*)\}$/.exec(part);
       if (m) host.appendChild(el("strong", m[1].length <= 12 ? "bf-nb" : "", m[1]));
       else if (q) host.appendChild(el("sup", "bf-sup", q[1]));
+      else if (u) host.appendChild(el("sub", "bf-base", u[1]));
       else if (part) host.appendChild(document.createTextNode(part));
     });
     return host;
@@ -279,9 +280,9 @@
 
   function freshStage() { var st = S.stages[S.idx]; S.vals = st.fields.map(function () { return ""; }); S.focus = 0; S.bad = {}; }
 
-  function newProblem() {
-    var p = C.gen(sel.kind, sel.lv, recent), stages;
-    recent.push(p.key); if (recent.length > C.AVOID) recent.shift();
+  function newProblem(forced) {                                 // forced：自己検査が決まった問題を出すとき
+    var p = forced || C.gen(sel.kind, sel.lv, recent), stages;
+    if (!forced) { recent.push(p.key); if (recent.length > C.AVOID) recent.shift(); }
     stages = C.stagesOf(p);
     S = { p: p, stages: stages, idx: 0, sst: stages.map(function () { return C.newStageState(); }), results: [], view: [], fixes: [], done: false, doneAt: 0, inputs: [], extras: {}, vals: [], focus: 0, bad: {} };
     C.recStart(rec, sel.kind, sel.lv); persist();
@@ -494,6 +495,17 @@
     renderSubmenu(); show("bf-submenu-screen");
   }
 
+  /* ---- 別のタブで記録が変わった（消された）とき：読み直す．古い回数を書き戻さない ---- */
+  function onStorage(ev) {
+    var kind = sel.kind, lv = sel.lv, fresh;
+    if (SELFTEST || !storage || ev.storageArea !== storage) return;
+    if (ev.key !== null && ev.key !== C.STORAGE_KEY) return;
+    fresh = C.loadRec(storage); rec = fresh.rec; storageOk = fresh.usable; sel = rec.sel; sel.kind = kind; sel.lv = lv;     // 選んでいる向き・難易度はこのタブのまま
+    if (S && !S.done) C.recStart(rec, kind, lv);                                   // 解いている途中の問題はそのまま続ける（記録はこの問題が終わったときに書く）
+    renderSubmenu(); renderMine(); updateNote();
+    if (S) renderStreak();
+  }
+
   /* ---- 記録を消す（画面内の確認．最初のフォーカスは「やめる」） ---- */
   function openReset() { $("bf-reset-confirm").hidden = false; $("bf-reset-no").focus(); }
   function closeReset(back) { $("bf-reset-confirm").hidden = true; if (back) $("bf-reset-btn").focus(); }
@@ -624,11 +636,13 @@
       if (tag === "BUTTON" || tag === "SUMMARY" || tag === "A" || tag === "INPUT") return;
       ev.preventDefault(); goNext();
     });
+    window.addEventListener("storage", onStorage);
     renderSubmenu(); updateNote();
   }
 
   init();
 
+  /*@@TEST@@*/
   /* ---- 画面の検査（?selftest=1 のとき．DOM のテキストの禁止語・先出し・横スクロール・既存画面に影響しないこと） ---- */
   function domAudit() {
     var out = { combos: 0, problems: 0, states: 0, checked: 0, fail: 0, failures: [], layout: { vw: innerWidth, vh: innerHeight, states: 0, maxDoc: 0, maxBtn: 0, maxSheet: 0, maxPanel: 0, taller: 0, overX: 0, maxShift: 0 } }, seen = {};
@@ -687,8 +701,8 @@
     }
     function meas(label) {                                    // 画面の収まり：文書の高さ・「答え合わせ」ボタン・作業用紙・パネルの底（練習画面のとき）
       var L = out.layout, q = function (id) { return $(id).getBoundingClientRect().bottom; }, h = document.documentElement.scrollHeight;
-      if (!isActive("bf-play-screen") || $("bf-mine").open || !$("bf-reset-confirm").hidden) return;      // 「きみの記録」を開いた・確認を出した状態は除く
-      L.states++; L.maxDoc = Math.max(L.maxDoc, h); L.maxBtn = Math.max(L.maxBtn, q("bf-check")); L.maxSheet = Math.max(L.maxSheet, q("bf-sheet")); L.maxPanel = Math.max(L.maxPanel, q("bf-panel"));
+      if (!isActive("bf-play-screen") || $("bf-mine").open) return;      // 「きみの記録」を開いた状態は除く（記録の確認を出した状態は含める）
+      L.states++; if (h > L.maxDoc) L.maxLabel = label + " " + h; L.maxDoc = Math.max(L.maxDoc, h); L.maxBtn = Math.max(L.maxBtn, q("bf-check")); L.maxSheet = Math.max(L.maxSheet, q("bf-sheet")); L.maxPanel = Math.max(L.maxPanel, q("bf-panel"));
       if (h > innerHeight && innerWidth >= 768 && innerHeight >= 768) fail("スクロールが出る（文書の高さ " + h + "／窓 " + innerHeight + "）：" + label);
       if (h > innerHeight) { L.taller++; (L.tallLabels = L.tallLabels || []).length < 8 && L.tallLabels.push(label + " " + h); }
       if (document.documentElement.scrollWidth > document.documentElement.clientWidth) L.overX++;
@@ -703,12 +717,35 @@
       out.layout.clipped = (out.layout.clipped || 0) + (bad ? 1 : 0);
       if (bad && innerWidth >= 768) fail(label + "：画面の幅からはみ出している要素が " + bad + " 個ある");
     }
+    function ownText(e) { var k; for (k = 0; k < e.childNodes.length; k++) if (e.childNodes[k].nodeType === 3 && e.childNodes[k].nodeValue.replace(/\s/g, "") !== "") return true; return false; }
+    function geom(label, rootSel) {                       // 要素どうしの重なり（矩形の交差）と，欄・文字の切れ（scrollWidth が clientWidth を超える）
+      var root = document.querySelector(rootSel), nodes, leaves = [], i, j, a, b, ra, rb, ox, oy;
+      if (!root) return;
+      nodes = root.querySelectorAll("*");
+      for (i = 0; i < nodes.length; i++) {
+        a = nodes[i];
+        if (a.classList.contains("bf-sr") || a.closest("[hidden]") || a.closest(".bf-selftest") || !(a.tagName === "INPUT" || ownText(a))) continue;
+        ra = a.getBoundingClientRect();
+        if (ra.width <= 0 || ra.height <= 0) continue;
+        leaves.push({ e: a, r: ra });
+        if (a.clientWidth > 0 && a.scrollWidth > a.clientWidth + 1) { out.layout.cut = (out.layout.cut || 0) + 1; fail(label + "：文字が切れている（scrollWidth " + a.scrollWidth + "／clientWidth " + a.clientWidth + "）" + a.tagName + "." + a.className + " 「" + (a.value || a.textContent).slice(0, 12) + "」"); }
+      }
+      out.checked += leaves.length;
+      for (i = 0; i < leaves.length; i++) for (j = i + 1; j < leaves.length; j++) {
+        a = leaves[i]; b = leaves[j];
+        if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+        ox = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left); oy = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        if (ox > 1.5 && oy > 1.5) { out.layout.overlap = (out.layout.overlap || 0) + 1; fail(label + "：要素が重なっている " + a.e.tagName + "." + a.e.className + " と " + b.e.tagName + "." + b.e.className + "（" + Math.floor(ox) + "×" + Math.floor(oy) + "px）"); }
+      }
+      out.layout.geomStates = (out.layout.geomStates || 0) + 1;
+    }
     function audit1(label) {
       var list = texts(), bad = C.checkTexts(list);
       out.states++; out.checked += list.length + 1;
       bad.forEach(function (b) { fail(label + "：" + b); });
       if (S) { leaks().forEach(function (b) { fail(label + "：答えの先出し " + b); }); out.checked++; }
       noScrollX(label); meas(label);
+      if (isActive("bf-play-screen")) geom(label, "#bf-panel"); else if (isActive("bf-learn-screen")) geom(label, "#bf-tutorial-card");
       out.checked++; if (document.querySelector("#bf-play-screen .timer-container, #bf-play-screen .combo-display, #bf-play-screen .timer-bar, #bf-play-screen [id*=timer]")) fail(label + "：タイマー・コンボの部品がある");
     }
     function lockedMatch() {                              // 解決した欄の表示が模範の値と一致
@@ -747,7 +784,13 @@
     /* 既存の画面に影響しないこと：メニュー・サブメニューの作りと，既存カテゴリの遷移（解説・タイマー・コンボには触れない） */
     (function () {
       var cats = document.querySelectorAll(".category-select-btn"), cards = document.querySelectorAll("#menu-screen .card-btn"), i, ids = ["menu-screen", "submenu-screen", "game-screen", "result-screen", "learn-screen", "settings-modal", "timer-bar", "combo-display", "answer-input", "submit-btn"];
-      out.checked += 6 + ids.length;
+      out.checked += 8 + ids.length;
+      (function () {                                      // メニュー：カード 5 枚が窓に収まる（style.css の既存の規則は変えず，binary-fraction.css が余白を詰める）
+        var doc = document.documentElement.scrollHeight, cb = document.querySelector(".app-container").getBoundingClientRect().bottom;
+        out.layout.menuDoc = doc; out.layout.menuBottom = Math.floor(cb);
+        if (innerWidth >= 768 && innerHeight >= 768 && (doc > innerHeight || cb > innerHeight)) fail("メニューが窓に収まらない（文書の高さ " + doc + "／枠の底 " + Math.floor(cb) + "／窓 " + innerHeight + "）");
+        if (document.querySelectorAll("#menu-screen .mode-grid > .card-btn").length !== 5) fail("メニューのカードが 5 枚でない");
+      })();
       if (cats.length !== 3) fail("既存の 3 カテゴリのボタンが " + cats.length + " 個");
       if (cards.length !== 5) fail("メニューのカードが " + cards.length + " 枚（既存 3＋4 つ目 1＋新 1 のはず）");
       if (!$("bc-open-btn") || !$("bf-open-btn")) fail("4 つ目・5 つ目のカードのどちらかが無い");
@@ -820,6 +863,19 @@
         })();
       }
       out.checked++; if ($("bf-learn-screen").querySelector(".tutorial-visual .bf-vc") === null) fail("解説の絵が出ていない");
+      (function () {                                       // 解説の基数の添字 (2) は下付き（紙の ₍₂₎）．上付きの (2) が残らない
+        var k, subs, sups, step, want, j;
+        for (k = 0; k < n; k++) {
+          learnIdx = k; renderLearn();
+          want = JSON.stringify(T.learn.steps[k]).indexOf("_{(2)}") >= 0;
+          subs = $("bf-learn-screen").querySelectorAll("sub.bf-base"); sups = $("bf-learn-screen").querySelectorAll("sup");
+          out.checked += 2;
+          if (want && subs.length === 0) fail("解説 " + (k + 1) + "：基数の添字が下付きで出ていない");
+          for (j = 0; j < sups.length; j++) if (/^\(.*\)$/.test(sups[j].textContent)) fail("解説 " + (k + 1) + "：上付きの " + sups[j].textContent + " が残っている");
+          for (j = 0; j < subs.length; j++) if (subs[j].textContent !== "(2)") fail("解説 " + (k + 1) + "：下付きが (2) でない「" + subs[j].textContent + "」");
+        }
+        learnIdx = 0; renderLearn();
+      })();
       learnIdx = 0;
     })();
     show("bf-play-screen");
@@ -828,6 +884,28 @@
       choose(kind, lv); out.combos++;
       for (n = 0; n < 24; n++) runProblem(n % 4, n);
     }); });
+    (function () {                                       // 全問題の全段：要素どうしの重なり・欄の文字の切れ・縦スクロール・横はみ出し（初級 15 通り×2 向き，中級 225 通り×2 向き）
+      var n = 0, E = out.layout;
+      E.exProblems = 0; E.exStates = 0;
+      C.KINDS.forEach(function (kind) { C.LEVELS.forEach(function (lv) {
+        var I, k, si, st, label;
+        sel.kind = kind; sel.lv = lv; recent = []; renderPlayControls();
+        for (I = (lv === 2 ? 1 : 0); I <= (lv === 2 ? 15 : 0); I++) for (k = 1; k <= 15; k++) {
+          newProblem(C.makeProblem({ kind: kind, lv: lv, I: I, k: k })); E.exProblems++;
+          for (si = 0; si < S.stages.length; si++) {
+            st = S.stages[si]; label = "全数 " + C.titleOf(S.p) + " " + st.key;
+            typeInto(st.fields.map(function (f) { return f.model; })); meas(label); noScrollX(label); geom(label, "#bf-panel"); E.exStates++;      // 入力中（いちばん長い値が入った状態）
+            typeInto(wrongVals(st, "all")); check(); meas(label + " 誤り"); noScrollX(label + " 誤り"); geom(label + " 誤り", "#bf-panel"); E.exStates++;                                    // 誤り（ヒントが出た状態）
+            $("bf-reset-confirm").hidden = false; meas(label + " 誤り＋確認"); geom(label + " 誤り＋確認", "#bf-panel"); $("bf-reset-confirm").hidden = true; E.exStates++;
+            typeInto(st.fields.map(function (f) { return f.model; })); check(); meas(label + " 正解"); noScrollX(label + " 正解"); geom(label + " 正解", "#bf-panel"); E.exStates++;
+          }
+          if (!S.done) fail("全数：最後まで解けない " + C.titleOf(S.p));
+        }
+      }); });
+      out.problems += E.exProblems; n = E.exProblems;
+      out.checked++; if (n !== 15 * 2 + 225 * 2) fail("全数の問題数が 15×2＋225×2 でない（" + n + "）");
+    })();
+    show("bf-play-screen"); choose("d2b", 1);
     (function () {                                       // 検査自体が働くこと：画面に禁止語を入れると見つかる
       var keep = $("bf-extra").textContent, found;
       $("bf-extra").textContent = "丸め誤差"; found = C.checkTexts(texts()).length > 0; $("bf-extra").textContent = keep;

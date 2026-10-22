@@ -83,6 +83,13 @@ def new_ctx(b, w=1366, h=768, **kw):
     ctx.route(re.compile(r'https?://fonts\.(googleapis|gstatic)\.com/.*'), lambda r: r.abort())
     return ctx
 
+def open_bf(pg):
+    # メニューの 5 つ目のカードを押す（再読み込み直後に押しが空振りすることが，まれにあるので，サブメニューが出るまで押し直す）
+    for _ in range(5):
+        pg.click('#bf-open-btn'); pg.wait_for_timeout(120)
+        if pg.is_visible('#bf-submenu-screen'): return
+    raise Exception('5 つ目のカードを押してもサブメニューが出ない')
+
 def selall(pg): pg.evaluate('document.activeElement.select()')
 
 def fw(t): return ''.join(chr(ord(c) + 0xFEE0) if c.isdigit() else ('．' if c == '.' else c) for c in t)
@@ -161,7 +168,7 @@ def run_inputs(b, p):
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.on('request', lambda r: reqs.append(r.url))
     cdp = ctx.new_cdp_session(pg)
-    pg.goto(URL); pg.click('#bf-open-btn'); E = Env(pg, cdp)
+    pg.goto(URL); open_bf(pg); E = Env(pg, cdp)
     for kind in ('d2b', 'b2d'):
         for lv in (1, 2):
             if pg.is_visible('#bf-back-btn'): pg.click('#bf-back-btn')
@@ -298,13 +305,40 @@ def run_gate(b):
     rec(pg.is_visible('#bf-selftest-note') and '記録は保存されません' in pg.inner_text('#bf-selftest-note'), '自己検査中は画面の隅に知らせる')
     ctx.close()
 
+def run_tabs(b):
+    # 別のタブで「記録を消す」→ 開いていたタブが，消す前の回数を書き戻さない
+    ctx = new_ctx(b, 1366, 768); A = ctx.new_page(); B = ctx.new_page(); errs = []
+    A.on('pageerror', lambda e: errs.append(str(e))); B.on('pageerror', lambda e: errs.append(str(e)))
+    EA = Env(A, ctx.new_cdp_session(A))
+    A.goto(URL); A.evaluate('localStorage.clear()'); A.reload(); open_bf(A); A.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); A.click('.bf-action-btn[data-action=d2b]')
+    def solve(pg, E):
+        t = pg.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
+        for m in ms: E.fill_stage(m); E.check('enter')
+        pg.wait_for_timeout(450); pg.keyboard.press('Enter')
+    for _ in range(2): solve(A, EA)
+    key = "localStorage.getItem('csMathTrainer.binaryFraction.v1')"
+    d = json.loads(A.evaluate(key)); rec(d['rec']['d2b1']['tried'] == 2, '別タブの検査：A で 2 問解いた tried=%s' % d['rec']['d2b1']['tried'])
+    B.goto(URL); open_bf(B); B.click('.bf-action-btn[data-action=d2b]'); B.click('#bf-reset-btn'); B.click('#bf-reset-yes')
+    d = json.loads(B.evaluate(key)); rec(d['rec']['d2b1']['tried'] == 0, '別タブの検査：B で消した tried=%s' % d['rec']['d2b1']['tried'])
+    A.wait_for_timeout(300)
+    A.click('#bf-mine-sum'); txt = A.inner_text('#bf-mine-body'); rec('解いた問題 0 問' in txt, '別タブの検査：A の「きみの記録」も 0 問に読み直す %r' % txt[:60]); A.click('#bf-mine-sum')
+    solve(A, EA)
+    d = json.loads(A.evaluate(key)); rec(d['rec']['d2b1']['tried'] == 1 and d['rec']['d2b1']['stage']['bits']['n'] == 1, '別タブの検査：A が次の問題を解いても，消す前の回数を書き戻さない tried=%s' % d['rec']['d2b1']['tried'])
+    # 4 つ目と同じ：解いている途中のタブも，別タブで消されたあとは途中の問題を続けられる
+    t = A.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1); EA.fill_stage(ms[0]); EA.check('enter')
+    B.click('#bf-reset-btn'); B.click('#bf-reset-yes'); A.wait_for_timeout(300)
+    for m in ms[1:]: EA.fill_stage(m); EA.check('enter')
+    d = json.loads(A.evaluate(key)); rec(d['rec']['d2b1']['tried'] == 1, '別タブの検査：途中だった問題は，終わったときに 1 問として数える tried=%s' % d['rec']['d2b1']['tried'])
+    rec(not errs, '別タブの検査でエラー %s' % errs[:2])
+    ctx.close()
+
 def run_storage(b):
     # 記録：解いたあと再読み込みしても残る・連続 3 問で ✓・記録を消す・壊れた値・巨大な値
     ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []
     pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
     cdp = ctx.new_cdp_session(pg); E = Env(pg, cdp)
     pg.goto(URL); pg.evaluate('localStorage.clear()'); pg.reload()
-    pg.click('#bf-open-btn'); pg.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); pg.click('.bf-action-btn[data-action=d2b]')
+    open_bf(pg); pg.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); pg.click('.bf-action-btn[data-action=d2b]')
     def solve_perfect():
         t = pg.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
         for m in ms: E.fill_stage(m); E.check('enter')
@@ -314,7 +348,7 @@ def run_storage(b):
     pg.click('#bf-back-btn')
     tick = pg.inner_text('.bf-ticks[data-kind=d2b]'); rec('初級 ✓' in tick.replace('\n', ' '), '3 問連続で初級に ✓ %r' % tick)
     saved = pg.evaluate("localStorage.getItem('csMathTrainer.binaryFraction.v1')"); rec(saved is not None and '"d2b1"' in saved, '記録が localStorage に書かれる')
-    pg.reload(); pg.click('#bf-open-btn'); tick = pg.inner_text('.bf-ticks[data-kind=d2b]'); rec('初級 ✓' in tick.replace('\n', ' '), '再読み込みしても ✓ が残る %r' % tick)
+    pg.reload(); open_bf(pg); tick = pg.inner_text('.bf-ticks[data-kind=d2b]'); rec('初級 ✓' in tick.replace('\n', ' '), '再読み込みしても ✓ が残る %r' % tick)
     pg.click('.bf-action-btn[data-action=d2b]'); pg.click('#bf-mine-sum'); txt = pg.inner_text('#bf-mine-body'); rec('解いた問題 3 問' in txt, '「きみの記録」に 3 問 %r' % txt[:80])
     pg.click('#bf-mine-sum')
     # 記録を消す（選んでいた向き・難易度は保つ）
@@ -329,14 +363,14 @@ def run_storage(b):
             '{"v":1,"rec":{"d2b1":{"tried":1e300,"perfect":1e300,"streak":1e300,"cleared":true,"stage":{"rows":{"n":1e300,"miss1":1e300,"rev":1e300}}}}}', 'x' * 3000000]
     for sv in bads:
         pg.evaluate("v=>localStorage.setItem('csMathTrainer.binaryFraction.v1', v)", sv)
-        pg.reload(); pg.click('#bf-open-btn'); pg.click('.bf-action-btn[data-action=d2b]')
+        pg.reload(); open_bf(pg); pg.click('.bf-action-btn[data-action=d2b]')
         t = pg.inner_text('#bf-qtitle'); rec(t != '', '壊れた記録でも開く %r' % sv[:30])
         pg.click('#bf-mine-sum'); txt = pg.inner_text('#bf-mine-body'); rec('NaN' not in txt and 'undefined' not in txt, '壊れた記録の表示 %r' % txt[:80]); pg.click('#bf-mine-sum')
     # localStorage が使えない・書けない端末
     ctx2 = new_ctx(b, 1366, 768); p2 = ctx2.new_page(); e2 = []
     p2.on('pageerror', lambda e: e2.append(str(e)))
     p2.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}})")
-    p2.goto(URL); p2.click('#bf-open-btn'); p2.click('.bf-action-btn[data-action=b2d]'); E2 = Env(p2, ctx2.new_cdp_session(p2))
+    p2.goto(URL); open_bf(p2); p2.click('.bf-action-btn[data-action=b2d]'); E2 = Env(p2, ctx2.new_cdp_session(p2))
     t = p2.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
     for m in ms: E2.fill_stage(m); E2.check('enter')
     rec(p2.is_visible('#bf-storage-note') and 'この端末では記録を残せません' in p2.inner_text('#bf-storage-note'), 'localStorage が使えないと小さく知らせる')
@@ -347,7 +381,7 @@ def run_storage(b):
     ctx3 = new_ctx(b, 1366, 768); p3 = ctx3.new_page(); e3 = []
     p3.on('pageerror', lambda e: e3.append(str(e)))
     p3.add_init_script("Storage.prototype.setItem=function(){throw new DOMException('quota','QuotaExceededError')}")
-    p3.goto(URL); p3.click('#bf-open-btn'); p3.click('.bf-action-btn[data-action=d2b]')
+    p3.goto(URL); open_bf(p3); p3.click('.bf-action-btn[data-action=d2b]')
     E3 = Env(p3, ctx3.new_cdp_session(p3)); t = p3.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
     for m in ms: E3.fill_stage(m); E3.check('enter')
     rec(not e3 and 'おわり' in p3.inner_text('#bf-stagehead'), '書き込みが容量超過でも落ちない %s' % e3[:2])
@@ -368,6 +402,9 @@ def run_layout(b):
         rec(r['totalFail'] == 0, '%dx%d 2進数の小数の自己検査 失敗 %d %s' % (w, h, r['totalFail'], r['failures'][:3]))
         rec(r4['totalFail'] == 0, '%dx%d 4 つ目のカテゴリの自己検査 失敗 %d %s' % (w, h, r4['totalFail'], r4['failures'][:3]))
         rec(L['taller'] == 0 and L.get('learnTaller', 0) == 0 and L['overX'] == 0 and L.get('clipped', 0) == 0, '%dx%d スクロールなし・はみ出しなし %s' % (w, h, L))
+        rec(L.get('overlap', 0) == 0 and L.get('cut', 0) == 0 and L.get('exProblems') == 480 and L.get('geomStates', 0) > 7000, '%dx%d 要素の重なり・文字の切れ 0・全 480 問を測った %s' % (w, h, {k: L.get(k) for k in ('overlap', 'cut', 'exProblems', 'exStates', 'geomStates')}))
+        rec(L['menuDoc'] <= h and L['menuBottom'] <= h, '%dx%d メニューが窓に収まる 文書 %s 枠の底 %s' % (w, h, L['menuDoc'], L['menuBottom']))
+        print('   %dx%d: 練習 %d 状態（全問題 %d 問・%d 状態を含む）・重なり %s・切れ %s・縦スクロール %s・はみ出し %s・文書の最大高 %s・メニュー %s（枠の底 %s）・解説の「メニューに戻る」の底 %s' % (w, h, L['states'], L['exProblems'], L['exStates'], L.get('overlap', 0), L.get('cut', 0), L['taller'], L.get('clipped', 0), L['maxDoc'], L['menuDoc'], L['menuBottom'], int(L['learnMaxClose'])), flush=True)
         rec(not errs, '%dx%d エラー %s' % (w, h, errs[:2]))
         out.append((w, h, r['totalChecked'], r['totalFail'], r4['totalChecked'], r4['totalFail'], L['states'], L['taller'], L['maxDoc'], L.get('learnTaller', 0), L.get('clipped', 0)))
         ctx.close()
@@ -376,7 +413,7 @@ def run_layout(b):
 with sync_playwright() as p:
     b = p.chromium.launch()
     if 'inputs' in PARTS: run_inputs(b, p)
-    if 'storage' in PARTS: print('  storage', flush=True); run_gate(b); run_storage(b)
+    if 'storage' in PARTS: print('  storage', flush=True); run_gate(b); run_storage(b); run_tabs(b)
     print('  layout', flush=True)
     lay = run_layout(b) if 'layout' in PARTS else []
     print('checks', count, 'fail', len(fails))
