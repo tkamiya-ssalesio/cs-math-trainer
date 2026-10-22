@@ -200,10 +200,20 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 @media (max-width: 40rem) {
   .bf-sheet { --cw: min(4.1rem, calc((100vw - 11rem) / var(--n, 8))); --lab: 3.2rem; }
   .bf-x2grid { grid-template-columns: var(--lab) 4.6rem 1.6rem minmax(0, 1fr) 3.2rem; }
+  .bf-line { flex-wrap: wrap; gap: 0.4rem; }
+  .bf-in.bf-bit { width: 2.3rem; }
+  .bf-bits { gap: 0.2rem; }
+  .bf-sumrow { flex-wrap: wrap; }
+  .bf-expr { white-space: normal; font-size: 1rem; }
 }
 @media (max-width: 52rem) {
   .bf-vis { --vcw: 3.6rem; --vsep: 1.7rem; --vlab: 4.8rem; }
   .app-container.bf-learn { padding: 1rem 1rem 1.1rem; }
   .bf-tutorial { padding: 1rem 1rem; }
+}
+@media (max-width: 40rem) {
+  .bf-vis { --vlab: 3.6rem; --vsep: 1.4rem; --vcw: min(3.6rem, calc((100vw - 9.5rem - var(--vs, 0) * 1.4rem) / var(--vn, 8))); }
+  .bf-vc { font-size: 1rem; }
+  .bf-vc.bf-vlong { font-size: 0.8rem; }
 }
 @media (prefers-reduced-motion: reduce) { .bf-fade { animation: none; } }

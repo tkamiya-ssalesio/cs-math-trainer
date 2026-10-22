@@ -281,6 +281,16 @@ def run_inputs(b, p):
     rec(all(u.startswith(ORIGIN) for u in own) and len(own) >= 3, '新しいファイルの要求は同じ場所だけ %s' % own)
     ctx.close()
 
+def run_gate(b):
+    # ?selftest=10 などでは自己検査が動かない（値がちょうど 1 のときだけ）
+    ctx = b.new_context(viewport={'width': 1366, 'height': 768}); pg = ctx.new_page()
+    for q in ('?selftest=10', '?selftest=', '?x=selftest=1', '?selftest=0'):
+        pg.goto(URL + q); pg.wait_for_timeout(1500)
+        rec(pg.evaluate("typeof window.__bfSelftestResult") == 'undefined' and not pg.is_visible('#bf-selftest-note'), '%s では自己検査が動かない' % q)
+    pg.goto(URL + '?selftest=1&z=1'); pg.wait_for_function('window.__bfSelftestResult !== undefined', timeout=120000)
+    rec(pg.is_visible('#bf-selftest-note') and '記録は保存されません' in pg.inner_text('#bf-selftest-note'), '自己検査中は画面の隅に知らせる')
+    ctx.close()
+
 def run_storage(b):
     # 記録：解いたあと再読み込みしても残る・連続 3 問で ✓・記録を消す・壊れた値・巨大な値
     ctx = b.new_context(viewport={'width': 1366, 'height': 768}); pg = ctx.new_page(); errs = []
@@ -359,7 +369,7 @@ def run_layout(b):
 with sync_playwright() as p:
     b = p.chromium.launch()
     if 'inputs' in PARTS: run_inputs(b, p)
-    if 'storage' in PARTS: print('  storage', flush=True); run_storage(b)
+    if 'storage' in PARTS: print('  storage', flush=True); run_gate(b); run_storage(b)
     print('  layout', flush=True)
     lay = run_layout(b) if 'layout' in PARTS else []
     print('checks', count, 'fail', len(fails))

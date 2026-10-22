@@ -516,6 +516,7 @@
       tpl.push(spec.rows[0].cells[i] === "." ? "var(--vdot)" : "var(--vcw)");
     }
     box.style.gridTemplateColumns = tpl.join(" ");
+    box.style.setProperty("--vn", String(n)); box.style.setProperty("--vs", String(hasSep ? n - 1 : 0));
     spec.rows.forEach(function (rw2, ri2) {
       box.appendChild(rich("div", "bf-vlab", rw2.label));
       rw2.cells.forEach(function (cc, ci) {
@@ -538,7 +539,7 @@
   function visX2h(spec, delayBase) {
     var box = el("div", "bf-vis bf-vx2h bf-fade"), L = T.learn.cols, n = spec.rows.length;
     box.style.setProperty("--d", delayBase);
-    box.style.gridTemplateColumns = "var(--vlab) repeat(" + n + ", var(--vcw))";
+    box.style.gridTemplateColumns = "var(--vlab) repeat(" + n + ", var(--vcw))"; box.style.setProperty("--vn", String(n)); box.style.setProperty("--vs", "0");
     [[L.frac, 0], [L.x2, 1], [L.int, 2]].forEach(function (pr) {
       box.appendChild(el("div", "bf-vlab", pr[0]));
       spec.rows.forEach(function (rw, ci) { box.appendChild(el("div", "bf-vc" + (pr[1] === 0 && spec.hl.indexOf(ci) >= 0 ? " bf-vhl" : ""), rw[pr[1]])); });
@@ -698,7 +699,7 @@
       if (document.documentElement.scrollWidth > document.documentElement.clientWidth) fail(label + "：横スクロールがある");
       if (!act) return;                                   // style.css の body は overflow-x: hidden なので，はみ出しは scrollWidth に出ない．要素の右端・左端を直接見る
       nodes = act.querySelectorAll("*");
-      for (i = 0; i < nodes.length; i++) { r = nodes[i].getBoundingClientRect(); if (r.width > 0 && (r.right > w + 1 || r.left < -1) && !nodes[i].classList.contains("bf-sr") && !nodes[i].closest(".bf-selftest")) bad++; }
+      for (i = 0; i < nodes.length; i++) { r = nodes[i].getBoundingClientRect(); if (r.width > 0 && (r.right > w + 1 || r.left < -1) && !nodes[i].classList.contains("bf-sr") && !nodes[i].closest(".bf-selftest")) { bad++; if (!out.layout.clipSample) out.layout.clipSample = label + " " + nodes[i].tagName + "." + nodes[i].className + " right=" + Math.floor(r.right); } }
       out.layout.clipped = (out.layout.clipped || 0) + (bad ? 1 : 0);
       if (bad && innerWidth >= 768) fail(label + "：画面の幅からはみ出している要素が " + bad + " 個ある");
     }
