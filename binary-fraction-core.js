@@ -64,7 +64,7 @@ var BinFracCore = (function () {
                   b2d: "1 になっている位の位取りの値を表に書いて，足して10進数にします．" },
       kindLabel: "向き", levelBtnLabel: "難易度", progressLabel: "クリアの状況",
       cleared: "クリア", notYet: "まだ", tickTitle: "クリアの状況",
-      reset: "記録を消す", resetAsk: "本当に消しますか．この端末の記録がすべて消えます", resetYes: "消す", resetNo: "やめる",
+      reset: "記録を消す", resetAsk: "本当に消しますか．このカテゴリ（2進数の小数）の記録が消えます．ほかのカテゴリの記録は消えません", resetYes: "消す", resetNo: "やめる",
       streak: "連続", streakNote: "1回目で全段正解した問題の連続", stage: "段", stageEnd: "この問題はおわり",
       check: "答え合わせ", next: "次の問題へ", hintCheck: "Enter キーでも答え合わせ", hintNext: "Enter キーでも次へ",
       words: "ことば", mine: "きみの記録", lockedLabel: "確定",

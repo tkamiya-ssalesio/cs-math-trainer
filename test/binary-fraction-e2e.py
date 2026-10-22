@@ -85,19 +85,26 @@ def new_ctx(b, w=1366, h=768, **kw):
     return ctx
 
 RF = []                                                    # 読み込みに失敗した要求（Google Fonts は除く）
+def drop_errs(pg, n):
+    # 読み直した（失敗した読み込みの）あいだに溜まったエラーは捨てる（読み直しが成功したら，その失敗は検査の失敗ではない）
+    e = getattr(pg, '_errs', None)
+    if e is not None: del e[n:]
+
 def goto_ok(pg, url):
     # python3 -m http.server は，要求が重なるとまれに接続を切る（ERR_CONNECTION_RESET）．スクリプトが欠けたまま動くと検査が不安定になるので，読み込みに失敗したら読み直す
+    n = len(getattr(pg, '_errs', []))
     for _ in range(8):
         del RF[:]; pg.goto(url)
         if not RF: return
-        pg.wait_for_timeout(200)
+        pg.wait_for_timeout(200); drop_errs(pg, n)
     raise Exception('読み込みに失敗した要求が残る %s' % RF[:3])
 
 def reload_ok(pg):
+    n = len(getattr(pg, '_errs', []))
     for _ in range(8):
         del RF[:]; pg.reload()
         if not RF: return
-        pg.wait_for_timeout(200)
+        pg.wait_for_timeout(200); drop_errs(pg, n)
     raise Exception('読み込みに失敗した要求が残る %s' % RF[:3])
 
 def open_bf(pg):
@@ -181,7 +188,7 @@ NMETH = ['chrome', 'safari', 'insert', 'cdp-ime']
 BMETH = ['chrome', 'chrome-fw', 'safari', 'safari-fw', 'insert', 'insert-fw', 'cdp-ime']
 
 def run_inputs(b, p):
-    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []; reqs = []
+    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []; reqs = []; pg._errs = errs
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.on('request', lambda r: reqs.append(r.url))
     cdp = ctx.new_cdp_session(pg)
@@ -324,7 +331,7 @@ def run_gate(b):
 
 def run_tabs(b):
     # 別のタブで「記録を消す」→ 開いていたタブが，消す前の回数を書き戻さない
-    ctx = new_ctx(b, 1366, 768); A = ctx.new_page(); B = ctx.new_page(); errs = []
+    ctx = new_ctx(b, 1366, 768); A = ctx.new_page(); B = ctx.new_page(); errs = []; A._errs = errs; B._errs = errs
     A.on('pageerror', lambda e: errs.append(str(e))); B.on('pageerror', lambda e: errs.append(str(e)))
     EA = Env(A, ctx.new_cdp_session(A))
     goto_ok(A, URL); A.evaluate('localStorage.clear()'); reload_ok(A); open_bf(A); A.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); A.click('.bf-action-btn[data-action=d2b]')
@@ -351,7 +358,7 @@ def run_tabs(b):
 
 def run_storage(b):
     # 記録：解いたあと再読み込みしても残る・連続 3 問で ✓・記録を消す・壊れた値・巨大な値
-    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []
+    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []; pg._errs = errs
     pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
     cdp = ctx.new_cdp_session(pg); E = Env(pg, cdp)
     goto_ok(pg, URL); pg.evaluate('localStorage.clear()'); reload_ok(pg)
@@ -371,6 +378,7 @@ def run_storage(b):
     # 記録を消す（選んでいた向き・難易度は保つ）
     pg.click('.bf-kbtn[data-kind=b2d]'); pg.click('.bf-lbtn[data-lv="2"]'); pg.click('#bf-reset-btn'); rec(pg.is_visible('#bf-reset-confirm'), '記録を消す：確認が出る')
     rec(pg.evaluate("document.activeElement.id") == 'bf-reset-no', '確認の最初のフォーカスは「やめる」')
+    ask = pg.inner_text('#bf-reset-ask'); rec('このカテゴリ（2進数の小数）の記録が消えます' in ask and 'ほかのカテゴリの記録は消えません' in ask and 'この端末の記録がすべて' not in ask, '確認の文は，このカテゴリの記録だけが消えると言う %r' % ask)
     pg.click('#bf-reset-yes')
     after = json.loads(pg.evaluate("localStorage.getItem('csMathTrainer.binaryFraction.v1') || 'null'") or 'null')
     rec(after is None or all(c['tried'] == 0 and c['streak'] == 0 and not c['cleared'] for c in after['rec'].values()), '記録を消すと記録が初期状態になる %s' % (str(after)[:80],))
@@ -410,7 +418,7 @@ SIZES = [(1366, 768), (1280, 800), (1024, 768), (768, 1024), (820, 1180)]
 def run_layout(b):
     out = []
     for (w, h) in SIZES:
-        ctx = new_ctx(b, w, h); pg = ctx.new_page(); errs = []
+        ctx = new_ctx(b, w, h); pg = ctx.new_page(); errs = []; pg._errs = errs
         pg.on('pageerror', lambda e: errs.append(str(e)))
         goto_ok(pg, URL + ('&' if '?' in URL else '?') + 'selftest=1')
         pg.wait_for_function('window.__bfSelftestResult !== undefined && window.__selftestResult !== undefined', timeout=300000)

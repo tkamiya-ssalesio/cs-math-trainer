@@ -739,6 +739,12 @@
       }
       out.layout.geomStates = (out.layout.geomStates || 0) + 1;
     }
+    function confirmFit(label) {                          // 記録を消す確認の箱：窓の中に収まり（長い文でも），このカテゴリの記録だけが消えると言う
+      var r = $("bf-reset-confirm").getBoundingClientRect(), t = $("bf-reset-ask").textContent;
+      out.checked += 2;
+      if (innerWidth >= 768 && (r.left < 0 || r.right > innerWidth + 0.5 || r.bottom > innerHeight + 0.5 || r.top < 0)) fail(label + "：確認の箱が窓に収まらない（" + Math.floor(r.left) + "〜" + Math.floor(r.right) + "／" + Math.floor(r.top) + "〜" + Math.floor(r.bottom) + "）");
+      if (t.indexOf("このカテゴリ（2進数の小数）の記録が消えます") < 0 || t.indexOf("ほかのカテゴリの記録は消えません") < 0 || t.indexOf("この端末の記録がすべて") >= 0) fail(label + "：確認の文が，このカテゴリの記録だけが消えると言っていない「" + t + "」");
+    }
     function audit1(label) {
       var list = texts(), bad = C.checkTexts(list);
       out.states++; out.checked += list.length + 1;
@@ -896,7 +902,7 @@
             st = S.stages[si]; label = "全数 " + C.titleOf(S.p) + " " + st.key;
             typeInto(st.fields.map(function (f) { return f.model; })); meas(label); noScrollX(label); geom(label, "#bf-panel"); E.exStates++;      // 入力中（いちばん長い値が入った状態）
             typeInto(wrongVals(st, "all")); check(); meas(label + " 誤り"); noScrollX(label + " 誤り"); geom(label + " 誤り", "#bf-panel"); E.exStates++;                                    // 誤り（ヒントが出た状態）
-            $("bf-reset-confirm").hidden = false; meas(label + " 誤り＋確認"); geom(label + " 誤り＋確認", "#bf-panel"); $("bf-reset-confirm").hidden = true; E.exStates++;
+            $("bf-reset-confirm").hidden = false; confirmFit(label + " 確認"); meas(label + " 誤り＋確認"); geom(label + " 誤り＋確認", "#bf-panel"); $("bf-reset-confirm").hidden = true; E.exStates++;
             typeInto(st.fields.map(function (f) { return f.model; })); check(); meas(label + " 正解"); noScrollX(label + " 正解"); geom(label + " 正解", "#bf-panel"); E.exStates++;
           }
           if (!S.done) fail("全数：最後まで解けない " + C.titleOf(S.p));
@@ -935,7 +941,7 @@
         if (document.querySelector("#bf-lvsw [aria-pressed=true]").getAttribute("data-lv") !== String(ll)) fail("記録を消したあと，難易度のボタンの表示が変わった");
       }
     })();
-    $("bf-reset-confirm").hidden = false; audit1("記録を消す確認"); $("bf-reset-confirm").hidden = true;
+    $("bf-reset-confirm").hidden = false; confirmFit("記録を消す確認"); audit1("記録を消す確認"); $("bf-reset-confirm").hidden = true;
     $("bf-mine").open = true; audit1("きみの記録"); $("bf-mine").open = false;
     S = null; recent = []; renderSubmenu(); show("menu-screen");
     return out;
