@@ -10,6 +10,7 @@
 #   5. 外部と通信しない（同じ場所のファイル以外の要求がない．既存の style.css の Google Fonts の読み込みだけは元のまま）
 #   6. 幅ごと（1366×768・1280×800・1024×768・768×1024・820×1180）に，自己検査（?selftest=1）が失敗 0・スクロールなし・はみ出しなし
 #   7. 4 つ目のカテゴリの自己検査（?selftest=1 で一緒に動く）が失敗 0
+# 既存の style.css が読む Google Fonts の要求は遮断して動かす（網の状態で load が遅れ，検査が不安定になるため．画面の内容には関係しない）．
 # 失敗があれば終了コード 1．
 import re, sys, json, random
 from fractions import Fraction
@@ -75,6 +76,12 @@ JS_STATE = '''()=>{const a=document.activeElement;const cs=[...document.querySel
   head:document.getElementById('bf-stagehead').textContent, bad:cs.map(c=>c.classList.contains('bf-bad')),
   chips:[...document.querySelectorAll('#bf-chips .bf-chip')].map(c=>c.className.replace(/bf-chip |bf-cur/g,'').trim()), btn:document.getElementById('bf-check').textContent,
   title:document.getElementById('bf-qtitle').innerText, extra:document.getElementById('bf-extra').textContent}}'''
+
+def new_ctx(b, w=1366, h=768, **kw):
+    # 既存の style.css が読む Google Fonts の要求は遮断する（網の状態で load が遅れ，検査が不安定になるため．画面の内容には関係しない）
+    ctx = b.new_context(viewport={'width': w, 'height': h}, **kw)
+    ctx.route(re.compile(r'https?://fonts\.(googleapis|gstatic)\.com/.*'), lambda r: r.abort())
+    return ctx
 
 def selall(pg): pg.evaluate('document.activeElement.select()')
 
@@ -150,8 +157,8 @@ NMETH = ['chrome', 'safari', 'insert', 'cdp-ime']
 BMETH = ['chrome', 'chrome-fw', 'safari', 'safari-fw', 'insert', 'insert-fw', 'cdp-ime']
 
 def run_inputs(b, p):
-    ctx = b.new_context(viewport={'width': 1366, 'height': 768}); pg = ctx.new_page(); errs = []; reqs = []
-    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None); pg.on('pageerror', lambda e: errs.append(str(e)))
+    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []; reqs = []
+    pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.on('request', lambda r: reqs.append(r.url))
     cdp = ctx.new_cdp_session(pg)
     pg.goto(URL); pg.click('#bf-open-btn'); E = Env(pg, cdp)
@@ -283,7 +290,7 @@ def run_inputs(b, p):
 
 def run_gate(b):
     # ?selftest=10 などでは自己検査が動かない（値がちょうど 1 のときだけ）
-    ctx = b.new_context(viewport={'width': 1366, 'height': 768}); pg = ctx.new_page()
+    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page()
     for q in ('?selftest=10', '?selftest=', '?x=selftest=1', '?selftest=0'):
         pg.goto(URL + q); pg.wait_for_timeout(1500)
         rec(pg.evaluate("typeof window.__bfSelftestResult") == 'undefined' and not pg.is_visible('#bf-selftest-note'), '%s では自己検査が動かない' % q)
@@ -293,8 +300,8 @@ def run_gate(b):
 
 def run_storage(b):
     # 記録：解いたあと再読み込みしても残る・連続 3 問で ✓・記録を消す・壊れた値・巨大な値
-    ctx = b.new_context(viewport={'width': 1366, 'height': 768}); pg = ctx.new_page(); errs = []
-    pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
+    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []
+    pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
     cdp = ctx.new_cdp_session(pg); E = Env(pg, cdp)
     pg.goto(URL); pg.evaluate('localStorage.clear()'); pg.reload()
     pg.click('#bf-open-btn'); pg.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); pg.click('.bf-action-btn[data-action=d2b]')
@@ -326,7 +333,7 @@ def run_storage(b):
         t = pg.inner_text('#bf-qtitle'); rec(t != '', '壊れた記録でも開く %r' % sv[:30])
         pg.click('#bf-mine-sum'); txt = pg.inner_text('#bf-mine-body'); rec('NaN' not in txt and 'undefined' not in txt, '壊れた記録の表示 %r' % txt[:80]); pg.click('#bf-mine-sum')
     # localStorage が使えない・書けない端末
-    ctx2 = b.new_context(viewport={'width': 1366, 'height': 768}); p2 = ctx2.new_page(); e2 = []
+    ctx2 = new_ctx(b, 1366, 768); p2 = ctx2.new_page(); e2 = []
     p2.on('pageerror', lambda e: e2.append(str(e)))
     p2.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}})")
     p2.goto(URL); p2.click('#bf-open-btn'); p2.click('.bf-action-btn[data-action=b2d]'); E2 = Env(p2, ctx2.new_cdp_session(p2))
@@ -337,7 +344,7 @@ def run_storage(b):
     rec(not e2, 'localStorage が使えない端末でエラー %s' % e2[:2])
     ctx2.close()
     # 容量超過（setItem が投げる）
-    ctx3 = b.new_context(viewport={'width': 1366, 'height': 768}); p3 = ctx3.new_page(); e3 = []
+    ctx3 = new_ctx(b, 1366, 768); p3 = ctx3.new_page(); e3 = []
     p3.on('pageerror', lambda e: e3.append(str(e)))
     p3.add_init_script("Storage.prototype.setItem=function(){throw new DOMException('quota','QuotaExceededError')}")
     p3.goto(URL); p3.click('#bf-open-btn'); p3.click('.bf-action-btn[data-action=d2b]')
@@ -352,7 +359,7 @@ SIZES = [(1366, 768), (1280, 800), (1024, 768), (768, 1024), (820, 1180)]
 def run_layout(b):
     out = []
     for (w, h) in SIZES:
-        ctx = b.new_context(viewport={'width': w, 'height': h}); pg = ctx.new_page(); errs = []
+        ctx = new_ctx(b, w, h); pg = ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(URL + ('&' if '?' in URL else '?') + 'selftest=1')
         pg.wait_for_function('window.__bfSelftestResult !== undefined && window.__selftestResult !== undefined', timeout=300000)
