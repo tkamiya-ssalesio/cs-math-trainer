@@ -81,7 +81,24 @@ def new_ctx(b, w=1366, h=768, **kw):
     # 既存の style.css が読む Google Fonts の要求は遮断する（網の状態で load が遅れ，検査が不安定になるため．画面の内容には関係しない）
     ctx = b.new_context(viewport={'width': w, 'height': h}, **kw)
     ctx.route(re.compile(r'https?://fonts\.(googleapis|gstatic)\.com/.*'), lambda r: r.abort())
+    ctx.on('requestfailed', lambda r: RF.append(r.url) if 'fonts.' not in r.url else None)
     return ctx
+
+RF = []                                                    # 読み込みに失敗した要求（Google Fonts は除く）
+def goto_ok(pg, url):
+    # python3 -m http.server は，要求が重なるとまれに接続を切る（ERR_CONNECTION_RESET）．スクリプトが欠けたまま動くと検査が不安定になるので，読み込みに失敗したら読み直す
+    for _ in range(8):
+        del RF[:]; pg.goto(url)
+        if not RF: return
+        pg.wait_for_timeout(200)
+    raise Exception('読み込みに失敗した要求が残る %s' % RF[:3])
+
+def reload_ok(pg):
+    for _ in range(8):
+        del RF[:]; pg.reload()
+        if not RF: return
+        pg.wait_for_timeout(200)
+    raise Exception('読み込みに失敗した要求が残る %s' % RF[:3])
 
 def open_bf(pg):
     # メニューの 5 つ目のカードを押す（再読み込み直後に押しが空振りすることが，まれにあるので，サブメニューが出るまで押し直す）
@@ -168,7 +185,7 @@ def run_inputs(b, p):
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.on('request', lambda r: reqs.append(r.url))
     cdp = ctx.new_cdp_session(pg)
-    pg.goto(URL); open_bf(pg); E = Env(pg, cdp)
+    goto_ok(pg, URL); open_bf(pg); E = Env(pg, cdp)
     for kind in ('d2b', 'b2d'):
         for lv in (1, 2):
             if pg.is_visible('#bf-back-btn'): pg.click('#bf-back-btn')
@@ -299,9 +316,9 @@ def run_gate(b):
     # ?selftest=10 などでは自己検査が動かない（値がちょうど 1 のときだけ）
     ctx = new_ctx(b, 1366, 768); pg = ctx.new_page()
     for q in ('?selftest=10', '?selftest=', '?x=selftest=1', '?selftest=0'):
-        pg.goto(URL + q); pg.wait_for_timeout(1500)
+        goto_ok(pg, URL + q); pg.wait_for_timeout(1500)
         rec(pg.evaluate("typeof window.__bfSelftestResult") == 'undefined' and not pg.is_visible('#bf-selftest-note'), '%s では自己検査が動かない' % q)
-    pg.goto(URL + '?selftest=1&z=1'); pg.wait_for_function('window.__bfSelftestResult !== undefined', timeout=120000)
+    goto_ok(pg, URL + '?selftest=1&z=1'); pg.wait_for_function('window.__bfSelftestResult !== undefined', timeout=120000)
     rec(pg.is_visible('#bf-selftest-note') and '記録は保存されません' in pg.inner_text('#bf-selftest-note'), '自己検査中は画面の隅に知らせる')
     ctx.close()
 
@@ -310,7 +327,7 @@ def run_tabs(b):
     ctx = new_ctx(b, 1366, 768); A = ctx.new_page(); B = ctx.new_page(); errs = []
     A.on('pageerror', lambda e: errs.append(str(e))); B.on('pageerror', lambda e: errs.append(str(e)))
     EA = Env(A, ctx.new_cdp_session(A))
-    A.goto(URL); A.evaluate('localStorage.clear()'); A.reload(); open_bf(A); A.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); A.click('.bf-action-btn[data-action=d2b]')
+    goto_ok(A, URL); A.evaluate('localStorage.clear()'); reload_ok(A); open_bf(A); A.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); A.click('.bf-action-btn[data-action=d2b]')
     def solve(pg, E):
         t = pg.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
         for m in ms: E.fill_stage(m); E.check('enter')
@@ -318,7 +335,7 @@ def run_tabs(b):
     for _ in range(2): solve(A, EA)
     key = "localStorage.getItem('csMathTrainer.binaryFraction.v1')"
     d = json.loads(A.evaluate(key)); rec(d['rec']['d2b1']['tried'] == 2, '別タブの検査：A で 2 問解いた tried=%s' % d['rec']['d2b1']['tried'])
-    B.goto(URL); open_bf(B); B.click('.bf-action-btn[data-action=d2b]'); B.click('#bf-reset-btn'); B.click('#bf-reset-yes')
+    goto_ok(B, URL); open_bf(B); B.click('.bf-action-btn[data-action=d2b]'); B.click('#bf-reset-btn'); B.click('#bf-reset-yes')
     d = json.loads(B.evaluate(key)); rec(d['rec']['d2b1']['tried'] == 0, '別タブの検査：B で消した tried=%s' % d['rec']['d2b1']['tried'])
     A.wait_for_timeout(300)
     A.click('#bf-mine-sum'); txt = A.inner_text('#bf-mine-body'); rec('解いた問題 0 問' in txt, '別タブの検査：A の「きみの記録」も 0 問に読み直す %r' % txt[:60]); A.click('#bf-mine-sum')
@@ -337,7 +354,7 @@ def run_storage(b):
     ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []
     pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
     cdp = ctx.new_cdp_session(pg); E = Env(pg, cdp)
-    pg.goto(URL); pg.evaluate('localStorage.clear()'); pg.reload()
+    goto_ok(pg, URL); pg.evaluate('localStorage.clear()'); reload_ok(pg)
     open_bf(pg); pg.click('#bf-submenu-screen .bf-diff-btn[data-lv="1"]'); pg.click('.bf-action-btn[data-action=d2b]')
     def solve_perfect():
         t = pg.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
@@ -348,7 +365,7 @@ def run_storage(b):
     pg.click('#bf-back-btn')
     tick = pg.inner_text('.bf-ticks[data-kind=d2b]'); rec('初級 ✓' in tick.replace('\n', ' '), '3 問連続で初級に ✓ %r' % tick)
     saved = pg.evaluate("localStorage.getItem('csMathTrainer.binaryFraction.v1')"); rec(saved is not None and '"d2b1"' in saved, '記録が localStorage に書かれる')
-    pg.reload(); open_bf(pg); tick = pg.inner_text('.bf-ticks[data-kind=d2b]'); rec('初級 ✓' in tick.replace('\n', ' '), '再読み込みしても ✓ が残る %r' % tick)
+    reload_ok(pg); open_bf(pg); tick = pg.inner_text('.bf-ticks[data-kind=d2b]'); rec('初級 ✓' in tick.replace('\n', ' '), '再読み込みしても ✓ が残る %r' % tick)
     pg.click('.bf-action-btn[data-action=d2b]'); pg.click('#bf-mine-sum'); txt = pg.inner_text('#bf-mine-body'); rec('解いた問題 3 問' in txt, '「きみの記録」に 3 問 %r' % txt[:80])
     pg.click('#bf-mine-sum')
     # 記録を消す（選んでいた向き・難易度は保つ）
@@ -363,14 +380,14 @@ def run_storage(b):
             '{"v":1,"rec":{"d2b1":{"tried":1e300,"perfect":1e300,"streak":1e300,"cleared":true,"stage":{"rows":{"n":1e300,"miss1":1e300,"rev":1e300}}}}}', 'x' * 3000000]
     for sv in bads:
         pg.evaluate("v=>localStorage.setItem('csMathTrainer.binaryFraction.v1', v)", sv)
-        pg.reload(); open_bf(pg); pg.click('.bf-action-btn[data-action=d2b]')
+        reload_ok(pg); open_bf(pg); pg.click('.bf-action-btn[data-action=d2b]')
         t = pg.inner_text('#bf-qtitle'); rec(t != '', '壊れた記録でも開く %r' % sv[:30])
         pg.click('#bf-mine-sum'); txt = pg.inner_text('#bf-mine-body'); rec('NaN' not in txt and 'undefined' not in txt, '壊れた記録の表示 %r' % txt[:80]); pg.click('#bf-mine-sum')
     # localStorage が使えない・書けない端末
     ctx2 = new_ctx(b, 1366, 768); p2 = ctx2.new_page(); e2 = []
     p2.on('pageerror', lambda e: e2.append(str(e)))
     p2.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}})")
-    p2.goto(URL); open_bf(p2); p2.click('.bf-action-btn[data-action=b2d]'); E2 = Env(p2, ctx2.new_cdp_session(p2))
+    goto_ok(p2, URL); open_bf(p2); p2.click('.bf-action-btn[data-action=b2d]'); E2 = Env(p2, ctx2.new_cdp_session(p2))
     t = p2.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
     for m in ms: E2.fill_stage(m); E2.check('enter')
     rec(p2.is_visible('#bf-storage-note') and 'この端末では記録を残せません' in p2.inner_text('#bf-storage-note'), 'localStorage が使えないと小さく知らせる')
@@ -381,7 +398,7 @@ def run_storage(b):
     ctx3 = new_ctx(b, 1366, 768); p3 = ctx3.new_page(); e3 = []
     p3.on('pageerror', lambda e: e3.append(str(e)))
     p3.add_init_script("Storage.prototype.setItem=function(){throw new DOMException('quota','QuotaExceededError')}")
-    p3.goto(URL); open_bf(p3); p3.click('.bf-action-btn[data-action=d2b]')
+    goto_ok(p3, URL); open_bf(p3); p3.click('.bf-action-btn[data-action=d2b]')
     E3 = Env(p3, ctx3.new_cdp_session(p3)); t = p3.inner_text('#bf-qtitle'); kind, ms = stage_models(t, 1)
     for m in ms: E3.fill_stage(m); E3.check('enter')
     rec(not e3 and 'おわり' in p3.inner_text('#bf-stagehead'), '書き込みが容量超過でも落ちない %s' % e3[:2])
@@ -395,7 +412,7 @@ def run_layout(b):
     for (w, h) in SIZES:
         ctx = new_ctx(b, w, h); pg = ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))
-        pg.goto(URL + ('&' if '?' in URL else '?') + 'selftest=1')
+        goto_ok(pg, URL + ('&' if '?' in URL else '?') + 'selftest=1')
         pg.wait_for_function('window.__bfSelftestResult !== undefined && window.__selftestResult !== undefined', timeout=300000)
         r = pg.evaluate('window.__bfSelftestResult'); r4 = pg.evaluate('window.__selftestResult')
         L = r['extra']['domAudit']['layout']

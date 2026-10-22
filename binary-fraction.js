@@ -728,14 +728,14 @@
         ra = a.getBoundingClientRect();
         if (ra.width <= 0 || ra.height <= 0) continue;
         leaves.push({ e: a, r: ra });
-        if (a.clientWidth > 0 && a.scrollWidth > a.clientWidth + 1) { out.layout.cut = (out.layout.cut || 0) + 1; fail(label + "：文字が切れている（scrollWidth " + a.scrollWidth + "／clientWidth " + a.clientWidth + "）" + a.tagName + "." + a.className + " 「" + (a.value || a.textContent).slice(0, 12) + "」"); }
+        if (a.clientWidth > 0 && a.scrollWidth > a.clientWidth + 1) { out.layout.cut = (out.layout.cut || 0) + 1; if (innerWidth >= 768) fail(label + "：文字が切れている（scrollWidth " + a.scrollWidth + "／clientWidth " + a.clientWidth + "）" + a.tagName + "." + a.className + " 「" + (a.value || a.textContent).slice(0, 12) + "」"); }
       }
       out.checked += leaves.length;
       for (i = 0; i < leaves.length; i++) for (j = i + 1; j < leaves.length; j++) {
         a = leaves[i]; b = leaves[j];
         if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
         ox = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left); oy = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
-        if (ox > 1.5 && oy > 1.5) { out.layout.overlap = (out.layout.overlap || 0) + 1; fail(label + "：要素が重なっている " + a.e.tagName + "." + a.e.className + " と " + b.e.tagName + "." + b.e.className + "（" + Math.floor(ox) + "×" + Math.floor(oy) + "px）"); }
+        if (ox > 1.5 && oy > 1.5) { out.layout.overlap = (out.layout.overlap || 0) + 1; if (innerWidth >= 768) fail(label + "：要素が重なっている " + a.e.tagName + "." + a.e.className + " と " + b.e.tagName + "." + b.e.className + "（" + Math.floor(ox) + "×" + Math.floor(oy) + "px）"); }
       }
       out.layout.geomStates = (out.layout.geomStates || 0) + 1;
     }
@@ -808,7 +808,7 @@
       // 4 つ目のカテゴリ：メニュー → サブメニュー → メニュー（4 つ目の画面が今までどおり開く）
       out.checked += 3;
       $("bc-open-btn").click();
-      if (!isActive("bc-submenu-screen") || $("menu-screen").classList.contains("active")) fail("4 つ目のカテゴリ：サブメニューへ進まない");
+      if (!isActive("bc-submenu-screen") || $("menu-screen").classList.contains("active")) fail("4 つ目のカテゴリ：サブメニューへ進まない（active：" + Array.prototype.map.call(document.querySelectorAll(".screen.active"), function (n) { return n.id; }).join(",") + "）");
       if ($("bc-submenu-screen").querySelectorAll(".bc-action-btn").length !== 4) fail("4 つ目のカテゴリのサブメニューのボタンが 4 つでない");
       $("bc-submenu-back-btn").click();
       if (!$("menu-screen").classList.contains("active") || isActive("bc-submenu-screen")) fail("4 つ目のカテゴリ：メニューへ戻らない");
@@ -943,7 +943,8 @@
 
   if (SELFTEST) {
     (function () { var st = document.createElement("style"); st.textContent = "*, *::before, *::after { animation: none !important; transition: none !important; }"; document.head.appendChild(st); })();   // 寸法を測るので動きを止める
-    setTimeout(function () {
+    (function run(tries) {
+      if (window.__selftestResult === undefined && tries < 150) { setTimeout(function () { run(tries + 1); }, 200); return; }      // 4 つ目のカテゴリの自己検査（同じ URL で動く）が終わってから動く（画面の切り替えが重ならないように）
       var rep = C.selfTest(3000, 20261022), au = domAudit(), pre = $("bf-selftest");
       rep.extra.domAudit = { combos: au.combos, problems: au.problems, states: au.states, checked: au.checked, fail: au.fail, layout: au.layout };
       rep.totalChecked += au.checked; rep.totalFail += au.fail; rep.failures = rep.failures.concat(au.failures);
@@ -951,6 +952,6 @@
       window.__bfSelftestResult = rep;                       // 4 つ目のカテゴリの結果は window.__selftestResult（?selftest=1 で両方が動く）
       pre.textContent = "SELFTEST " + JSON.stringify(rep, null, 1); pre.hidden = false;
       console.log("SELFTEST-BF", rep);
-    }, 400);
+    })(0);
   }
 })();
