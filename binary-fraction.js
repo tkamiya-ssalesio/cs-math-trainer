@@ -136,11 +136,9 @@
       cell("bf-rlab", SH.decimal);
       if (lead) cell("bf-gap", "");
       S.inputs[0] = [];
-      var fi = 0;
-      cols.forEach(function (c, ci) {
+      cols.forEach(function (c, ci) {                                           // 全部の位に欄を置く（0 の位の模範は空欄）
         if (ci === intN) cell("bf-gap", "");
-        if (c.bit === "1") { var e = inputFor(sts[0].fields[fi], fi); var d = el("div", "bf-tc bf-vd"); d.appendChild(e); grid.appendChild(d); S.inputs[0].push(e); fi++; }
-        else cell("bf-vd bf-zero", SH.dash);
+        var e = inputFor(sts[0].fields[ci], ci), d = el("div", "bf-tc bf-vd"); d.appendChild(e); grid.appendChild(d); S.inputs[0].push(e);
       });
       if (intN === nd) cell("bf-gap", "");
       // 和
@@ -166,6 +164,7 @@
         e.value = v; e.disabled = mode !== "active";
         e.className = e.className.replace(/ bf-(locked|active|future|rev|fix|bad|flash)/g, "") + " bf-" + mode + (rev ? " bf-rev" : "");
         if (rev && (S.fixes[si] || []).indexOf(fi) >= 0) e.classList.add("bf-fix");
+        if (mode === "locked" && f.model === "") e.classList.add("bf-blank");                  // 模範が空欄の欄（0 の位）
         if (mode === "active" && S.bad[fi]) e.classList.add("bf-bad");
         e.setAttribute("aria-label", C.cellLabel(rowLabelOf(st), f.name, v));
         if (f.kind === "bit") e.setAttribute("tabindex", mode === "active" && fi === S.focus ? "0" : "-1");
@@ -901,6 +900,13 @@
           for (si = 0; si < S.stages.length; si++) {
             st = S.stages[si]; label = "全数 " + C.titleOf(S.p) + " " + st.key;
             typeInto(st.fields.map(function (f) { return f.model; })); meas(label); noScrollX(label); geom(label, "#bf-panel"); E.exStates++;      // 入力中（いちばん長い値が入った状態）
+            if (st.type === "place") {                                                     // 位取りの値：0 の位に値を書いた誤り・1 になっている位を空欄にした誤り・混ざった誤り（ヒントの長さがそれぞれ違う）
+              [st.cols.map(function (c) { return c.val; }), st.fields.map(function (f, i) { return i === st.fields.findIndex(function (g) { return g.one; }) ? f.model : ""; }), st.fields.map(function (f, i) { return f.one ? "" : st.cols[i].val; })].forEach(function (alt, ai) {
+                S.sst[S.idx] = C.newStageState(); S.bad = {}; typeInto(alt); check(); meas(label + " 誤り(" + ai + ")"); noScrollX(label + " 誤り(" + ai + ")"); geom(label + " 誤り(" + ai + ")", "#bf-panel"); E.exStates++;
+                $("bf-reset-confirm").hidden = false; confirmFit(label + " 確認(" + ai + ")"); meas(label + " 誤り(" + ai + ")＋確認"); $("bf-reset-confirm").hidden = true;
+              });
+              S.sst[S.idx] = C.newStageState(); S.bad = {};
+            }
             typeInto(wrongVals(st, "all")); check(); meas(label + " 誤り"); noScrollX(label + " 誤り"); geom(label + " 誤り", "#bf-panel"); E.exStates++;                                    // 誤り（ヒントが出た状態）
             $("bf-reset-confirm").hidden = false; confirmFit(label + " 確認"); meas(label + " 誤り＋確認"); geom(label + " 誤り＋確認", "#bf-panel"); $("bf-reset-confirm").hidden = true; E.exStates++;
             typeInto(st.fields.map(function (f) { return f.model; })); check(); meas(label + " 正解"); noScrollX(label + " 正解"); geom(label + " 正解", "#bf-panel"); E.exStates++;

@@ -69,6 +69,7 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 .bf-in.bf-locked { background: rgba(57, 255, 20, 0.08); border-color: transparent; color: var(--text-primary); opacity: 1; -webkit-text-fill-color: var(--text-primary); }
 .bf-in.bf-locked.bf-rev { background: rgba(254, 193, 7, 0.12); }
 .bf-in.bf-locked.bf-fix { border-color: var(--accent-red); }
+.bf-in.bf-locked.bf-blank { background: rgba(255, 255, 255, 0.02); border: 2px dashed var(--panel-border); }          /* 模範が空欄の欄（0 の位） */
 .bf-in.bf-bad { background: rgba(255, 51, 102, 0.14); border-color: var(--accent-red); border-width: 3px; color: var(--accent-red); }
 .bf-in.bf-flash { background: rgba(255, 51, 102, 0.14); border-color: var(--accent-red); }
 .bf-in:disabled { -webkit-text-fill-color: currentColor; }
@@ -103,7 +104,6 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 .bf-gap.bf-bn { font-size: 1.5rem; font-weight: 800; }
 .bf-vd { width: 100%; }
 .bf-vd .bf-in { width: 100%; font-size: 1.05rem; padding: 0 0.1rem; }                /* 最長の値 0.0625（6 文字）が欠けない幅 */
-.bf-zero { color: var(--text-secondary); font-size: 1.3rem; height: var(--ch); border: 2px dashed var(--panel-border); border-radius: 8px; width: 100%; }
 .bf-sumrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; min-height: var(--ch); border-top: 2px dashed var(--panel-border); padding-top: 0.45rem; width: 0; min-width: 100%; }   /* 表の幅を超えない（式は折り返す）．width: 0 で，作業用紙の幅を決める計算に入れない */
 .bf-expr { font-size: 1.1rem; font-weight: 700; white-space: normal; flex: 1 1 100%; min-width: 0; min-height: 1.6rem; overflow-wrap: anywhere; }   /* 式が出る前から 1 行ぶんの高さを取る（式が出ても作業用紙が動かない） */
 .bf-sumrow .bf-in { width: 8.5rem; flex: none; }
