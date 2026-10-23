@@ -136,7 +136,7 @@
       cell("bf-rlab", SH.decimal);
       if (lead) cell("bf-gap", "");
       S.inputs[0] = [];
-      cols.forEach(function (c, ci) {                                           // 全部の位に欄を置く（0 の位の模範は空欄）
+      cols.forEach(function (c, ci) {                                           // 全部の位に欄を置く（0 になっている位の模範は空欄）
         if (ci === intN) cell("bf-gap", "");
         var e = inputFor(sts[0].fields[ci], ci), d = el("div", "bf-tc bf-vd"); d.appendChild(e); grid.appendChild(d); S.inputs[0].push(e);
       });
@@ -164,9 +164,9 @@
         e.value = v; e.disabled = mode !== "active";
         e.className = e.className.replace(/ bf-(locked|active|future|rev|fix|bad|flash)/g, "") + " bf-" + mode + (rev ? " bf-rev" : "");
         if (rev && (S.fixes[si] || []).indexOf(fi) >= 0) e.classList.add("bf-fix");
-        if (mode === "locked" && f.model === "") e.classList.add("bf-blank");                  // 模範が空欄の欄（0 の位）
+        if (mode === "locked" && f.model === "") e.classList.add("bf-blank");                  // 模範が空欄の欄（0 になっている位）
         if (mode === "active" && S.bad[fi]) e.classList.add("bf-bad");
-        e.setAttribute("aria-label", C.cellLabel(rowLabelOf(st), f.name, v));
+        e.setAttribute("aria-label", (mode === "locked" && f.model === "") ? rowLabelOf(st) + " " + f.name + " 空欄のままでよい（0 になっている位）" : C.cellLabel(rowLabelOf(st), f.name, v));
         if (f.kind === "bit") e.setAttribute("tabindex", mode === "active" && fi === S.focus ? "0" : "-1");
         else e.removeAttribute("tabindex");
       });
@@ -532,7 +532,7 @@
       box.appendChild(rich("div", "bf-vlab", rw2.label));
       rw2.cells.forEach(function (cc, ci) {
         if (hasSep && ci > 0) box.appendChild(el("div", "bf-vsepc", ri2 === spec.rows.length - 1 ? spec.sep : ""));
-        box.appendChild(rich("div", "bf-vc" + (cc === "." ? " bf-vdotc" : "") + (cc === "—" ? " bf-vzero" : "") + (C.plain(cc).length >= 6 ? " bf-vlong" : "") + (rw2.hl && rw2.hl.indexOf(ci) >= 0 ? " bf-vhl" : ""), cc));
+        box.appendChild(rich("div", "bf-vc" + (cc === "." ? " bf-vdotc" : "") + ((cc === "—" || cc === "") ? " bf-vzero" : "") + (C.plain(cc).length >= 6 ? " bf-vlong" : "") + (rw2.hl && rw2.hl.indexOf(ci) >= 0 ? " bf-vhl" : ""), cc));
       });
     });
     return box;
@@ -762,8 +762,20 @@
       return st.fields.map(function (f, i) {
         if (f.kind === "bit") return kind === "last" ? (i === st.fields.length - 1 ? (f.model === "0" ? "1" : "0") : f.model) : (f.model === "0" ? "1" : "0");
         if (f.kind === "int") return f.model === "0" ? "1" : "0";
-        return i === 0 && kind === "last" ? "9.99" : "7.5";
+        return i === 0 && kind === "last" ? "9.99" : "99.5";
       });
+    }
+    function fixBorder(label) {                           // 値を見せた段：書き間違えた欄（bf-fix）の枠が赤い（0 になっている位の空欄の点線の規則に負けない）
+      var si, fi, e, cs, n = 0;
+      for (si = 0; si < S.stages.length; si++) {
+        if (S.view[si] !== "rev") continue;
+        for (fi = 0; fi < S.inputs[si].length; fi++) {
+          e = S.inputs[si][fi]; if (!e.classList.contains("bf-fix")) continue;
+          cs = getComputedStyle(e); n++; out.checked++;
+          if (cs.borderTopColor !== "rgb(255, 51, 102)" || cs.borderTopStyle !== "solid" || parseFloat(cs.borderTopWidth) < 2) fail(label + "：直した欄の枠が赤くない " + S.stages[si].key + " " + fi + "（" + cs.borderTopColor + " " + cs.borderTopStyle + " " + cs.borderTopWidth + (e.classList.contains("bf-blank") ? "．0 になっている位の空欄" : "") + "）");
+        }
+      }
+      out.layout.fixBorders = (out.layout.fixBorders || 0) + n;
     }
     function pos() { var g = $("bf-sheet").getBoundingClientRect(), q = $("bf-qtitle").getBoundingClientRect(); return [g.top, g.bottom, q.top, q.bottom]; }
     function checkSteady() {                               // 答え合わせの前後で，作業用紙と題の位置が動かない（上寄せ．作業用紙と手順が左右に並ぶ幅のとき）
@@ -900,7 +912,7 @@
           for (si = 0; si < S.stages.length; si++) {
             st = S.stages[si]; label = "全数 " + C.titleOf(S.p) + " " + st.key;
             typeInto(st.fields.map(function (f) { return f.model; })); meas(label); noScrollX(label); geom(label, "#bf-panel"); E.exStates++;      // 入力中（いちばん長い値が入った状態）
-            if (st.type === "place") {                                                     // 位取りの値：0 の位に値を書いた誤り・1 になっている位を空欄にした誤り・混ざった誤り（ヒントの長さがそれぞれ違う）
+            if (st.type === "place") {                                                     // 位取りの値：0 になっている位に値を書いた誤り・1 になっている位を空欄にした誤り・混ざった誤り（ヒントの長さがそれぞれ違う）
               [st.cols.map(function (c) { return c.val; }), st.fields.map(function (f, i) { return i === st.fields.findIndex(function (g) { return g.one; }) ? f.model : ""; }), st.fields.map(function (f, i) { return f.one ? "" : st.cols[i].val; })].forEach(function (alt, ai) {
                 S.sst[S.idx] = C.newStageState(); S.bad = {}; typeInto(alt); check(); meas(label + " 誤り(" + ai + ")"); noScrollX(label + " 誤り(" + ai + ")"); geom(label + " 誤り(" + ai + ")", "#bf-panel"); E.exStates++;
                 $("bf-reset-confirm").hidden = false; confirmFit(label + " 確認(" + ai + ")"); meas(label + " 誤り(" + ai + ")＋確認"); $("bf-reset-confirm").hidden = true;
@@ -916,6 +928,24 @@
       }); });
       out.problems += E.exProblems; n = E.exProblems;
       out.checked++; if (n !== 15 * 2 + 225 * 2) fail("全数の問題数が 15×2＋225×2 でない（" + n + "）");
+    })();
+    (function () {                                       // 全問題の全段：2回目も誤りで値を見せた状態（赤い枠・重なり・文字切れ・縦スクロール）
+      var E = out.layout, rev = 0;
+      E.revStates = 0; E.fixBorders = 0;
+      C.KINDS.forEach(function (kind) { C.LEVELS.forEach(function (lv) {
+        var I, k, si, st, label;
+        sel.kind = kind; sel.lv = lv; recent = []; renderPlayControls();
+        for (I = (lv === 2 ? 1 : 0); I <= (lv === 2 ? 15 : 0); I++) for (k = 1; k <= 15; k++) {
+          newProblem(C.makeProblem({ kind: kind, lv: lv, I: I, k: k }));
+          for (si = 0; si < S.stages.length; si++) {
+            st = S.stages[si]; label = "値を見せる " + C.titleOf(S.p) + " " + st.key;
+            typeInto(wrongVals(st, "all")); check(); typeInto(wrongVals(st, "all")); check();             // 1 回目の誤り，2 回目も誤り→値を見せる
+            if (S.view[si] !== "rev") fail(label + "：値を見せる状態にならない");
+            fixBorder(label); meas(label); noScrollX(label); geom(label, "#bf-panel"); E.revStates++; rev++;
+          }
+        }
+      }); });
+      out.checked++; if (E.revStates < 1500 || E.fixBorders < 1500) fail("値を見せた状態の測定が少ない（" + E.revStates + "／" + E.fixBorders + "）");
     })();
     show("bf-play-screen"); choose("d2b", 1);
     (function () {                                       // 検査自体が働くこと：画面に禁止語を入れると見つかる

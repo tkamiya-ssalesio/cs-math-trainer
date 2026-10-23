@@ -59,7 +59,7 @@ def stage_models(title, lv):
             out.append(('x2', dec1(x2), str(ig), dec(c))); ints += str(ig); c = x2 - ig
         out.append(('bits', ints))
     else:
-        vals = []; allv = []; bits = ''                  # 全部の位に欄：1 になっている位は位取りの値，0 の位は空欄（''）
+        vals = []; allv = []; bits = ''                  # 全部の位に欄：1 になっている位は位取りの値，0 になっている位は空欄（''）
         if lv == 2:
             n = len(ip)
             for i, ch in enumerate(ip):
@@ -146,7 +146,7 @@ class Env:
             s.focus_field(0); selall(s.pg); s.comp(method, vary(m[1], variant)); s.focus_field(1); selall(s.pg); s.comp(method, m[2])
         elif m[0] == 'place':
             for i, v in enumerate(m[1]):
-                s.focus_field(i); selall(s.pg)                              # 0 の位は空欄が正解（variant の 3 回に 1 回は「0」を書く．前の誤りの値が残っていれば消す）
+                s.focus_field(i); selall(s.pg)                              # 0 になっている位は空欄が正解（variant の 3 回に 1 回は「0」を書く．前の誤りの値が残っていれば消す）
                 if v: s.comp(method, vary(v, variant))
                 elif variant % 3 == 2: s.comp(method, '0' if variant % 2 else '0.0')
                 else: s.pg.keyboard.press('Backspace')
@@ -255,22 +255,31 @@ def run_inputs(b, p):
                             E.fill_stage(m); E.check(route); s2 = E.st(); rec(s2['fb'].startswith('正解（2回目）') or s2['fb'] == '正解（2回目）', '%s 空欄を直して正解（2回目）%s' % (tag0, s2['fb']))
                     else:
                         E.check(route); s1 = E.st(); rec(s1['fb'] == '和を入れよう' and s1['idx'] == 0, '%s 空で %s（和）%s' % (tag0, route, s1))
-            if kind == 'b2d':                                                  # 0 の位：空欄が正解／0 も正解／値を入れると誤り（ヒント）
+            if kind == 'b2d':                                                  # 0 になっている位：空欄が正解／0 も正解／値を入れると誤り（ヒント）
                 for _ in range(4):
                     t, ms = fresh(lambda ms: '' in ms[0][1]); m = ms[0]; zeros = [i for i, v in enumerate(m[1]) if v == '']
                     for i, v in enumerate(m[1]):
                         if v: E.focus_field(i); selall(pg); E.comp('insert', v)
-                    E.check('enter'); s1 = E.st(); rec(s1['fb'] == '正解' and ('段 2／' in s1['head']), '%s %s 0 の位が空欄のままで正解 %s' % (tag0, t, s1['fb']))
+                    E.check('enter'); s1 = E.st(); rec(s1['fb'] == '正解' and ('段 2／' in s1['head']), '%s %s 0 になっている位が空欄のままで正解 %s' % (tag0, t, s1['fb']))
                     t, ms = fresh(lambda ms: '' in ms[0][1]); m = ms[0]; zeros = [i for i, v in enumerate(m[1]) if v == '']
                     for i, v in enumerate(m[1]):
                         E.focus_field(i); selall(pg); E.comp('insert', v if v else random.choice(['0', '0.0', '.0', '00', '０']))
-                    E.check('button'); s1 = E.st(); rec(s1['fb'] == '正解' and ('段 2／' in s1['head']), '%s %s 0 の位に 0 を書いても正解 %s' % (tag0, t, s1['fb']))
+                    E.check('button'); s1 = E.st(); rec(s1['fb'] == '正解' and ('段 2／' in s1['head']), '%s %s 0 になっている位に 0 を書いても正解 %s' % (tag0, t, s1['fb']))
                     t, ms = fresh(lambda ms: '' in ms[0][1]); m = ms[0]; zeros = [i for i, v in enumerate(m[1]) if v == '']
                     for i, v in enumerate(m[1]):
                         if v: E.focus_field(i); selall(pg); E.comp('insert', v)
-                    z = zeros[0]; E.focus_field(z); selall(pg); E.comp('insert', m[3][z]); E.check('enter'); s1 = E.st()          # 0 の位に，その位の位取りの値を書いた
-                    rec(s1['fb'].startswith('おしい') and '0 の位は空欄でよい' in s1['hint'] and s1['bad'][z] and sum(s1['bad']) == 1 and s1['chips'][0] == 'bf-ng', '%s %s 0 の位に値を書いた誤り fb=%r hint=%r bad=%s' % (tag0, t, s1['fb'], s1['hint'], s1['bad']))
-                    selall(pg); pg.keyboard.press('Backspace'); E.check('enter'); s2 = E.st(); rec(s2['fb'] == '正解（2回目）', '%s 0 の位の値を消して正解（2回目）%s' % (tag0, s2['fb']))
+                    z = zeros[0]; E.focus_field(z); selall(pg); E.comp('insert', m[3][z]); E.check('enter'); s1 = E.st()          # 0 になっている位に，その位の位取りの値を書いた
+                    rec(s1['fb'].startswith('おしい') and '0 になっている位は空欄でよい' in s1['hint'] and s1['bad'][z] and sum(s1['bad']) == 1 and s1['chips'][0] == 'bf-ng', '%s %s 0 になっている位に値を書いた誤り fb=%r hint=%r bad=%s' % (tag0, t, s1['fb'], s1['hint'], s1['bad']))
+                    # 2回目も誤りで値を見せたとき，書き間違えた 0 になっている位の欄（模範は空欄）も赤い実線の枠
+                    t, ms = fresh(lambda ms: '' in ms[0][1]); m = ms[0]
+                    enter_wrong(E, m); E.check('enter'); enter_wrong(E, m); E.check('enter')
+                    cs = pg.evaluate("()=>[...document.querySelectorAll('#bf-sheet input.bf-locked.bf-blank.bf-fix')].map(e=>{const c=getComputedStyle(e);return [c.borderTopColor,c.borderTopStyle,e.value]})")
+                    rec(len(cs) >= 1 and all(c[0] == 'rgb(255, 51, 102)' and c[1] == 'solid' and c[2] == '' for c in cs), '%s %s 値を見せたとき，0 になっている位の欄も赤い枠で空欄のまま %s' % (tag0, t, cs[:2]))
+                    t, ms = fresh(lambda ms: '' in ms[0][1]); m = ms[0]; zeros = [i for i, v in enumerate(m[1]) if v == '']
+                    for i, v in enumerate(m[1]):
+                        if v: E.focus_field(i); selall(pg); E.comp('insert', v)
+                    z = zeros[0]; E.focus_field(z); selall(pg); E.comp('insert', m[3][z]); E.check('enter')
+                    selall(pg); pg.keyboard.press('Backspace'); E.check('enter'); s2 = E.st(); rec(s2['fb'] == '正解（2回目）', '%s 0 になっている位の値を消して正解（2回目）%s' % (tag0, s2['fb']))
             # 誤り → ヒント → 正解（2回目）／2回目も誤りで値を見せる
             for si in range(maxst):
                 for mode in ('ok2', 'rev'):

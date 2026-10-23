@@ -69,7 +69,8 @@ body.bf-top { align-items: flex-start; }                   /* 練習画面だけ
 .bf-in.bf-locked { background: rgba(57, 255, 20, 0.08); border-color: transparent; color: var(--text-primary); opacity: 1; -webkit-text-fill-color: var(--text-primary); }
 .bf-in.bf-locked.bf-rev { background: rgba(254, 193, 7, 0.12); }
 .bf-in.bf-locked.bf-fix { border-color: var(--accent-red); }
-.bf-in.bf-locked.bf-blank { background: rgba(255, 255, 255, 0.02); border: 2px dashed var(--panel-border); }          /* 模範が空欄の欄（0 の位） */
+.bf-in.bf-locked.bf-blank { background: rgba(255, 255, 255, 0.02); border: 2px dashed var(--panel-border); }          /* 模範が空欄の欄（0 になっている位） */
+.bf-in.bf-locked.bf-blank.bf-fix { border: 2px solid var(--accent-red); }                       /* 値を見せたとき，書き間違えた 0 になっている位の欄も赤い枠（上の点線の規則に負けない） */
 .bf-in.bf-bad { background: rgba(255, 51, 102, 0.14); border-color: var(--accent-red); border-width: 3px; color: var(--accent-red); }
 .bf-in.bf-flash { background: rgba(255, 51, 102, 0.14); border-color: var(--accent-red); }
 .bf-in:disabled { -webkit-text-fill-color: currentColor; }

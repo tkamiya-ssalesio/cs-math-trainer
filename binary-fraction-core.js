@@ -111,26 +111,26 @@ var BinFracCore = (function () {
             { label: "位取り", cells: ["2^{3}", "2^{2}", "2^{1}", "2^{0}", ".", "2^{-1}", "2^{-2}", "2^{-3}", "2^{-4}"] },
             { label: "10進数", cells: ["8", "4", "2", "1", ".", "0.5", "0.25", "0.125", "0.0625"] } ] } },
         { title: "2進数→10進数（例1）",
-          text: ["<b>1 になっている位の値を足す．</b>0 の位には値を書かない．",
+          text: ["<b>1 になっている位の値を足す．</b>",
                  "0.111_{(2)} ＝ 0.5＋0.25＋0.125 ＝ 0.875"],
           visual: { type: "tbl", rows: [
             { label: "位取り", cells: ["2^{-1}", "2^{-2}", "2^{-3}"] },
             { label: "0.111_{(2)}", cells: ["1", "1", "1"] },
             { label: "足す値", cells: ["0.5", "0.25", "0.125"], hl: [0, 1, 2] } ] } },
         { title: "2進数→10進数（例2）",
-          text: ["0 の位は空欄のまま（0 でもよい）．足さない．",
+          text: ["0 になっている位は空欄のまま（0 でもよい）．足すのは 1 になっている位の値だけ．",
                  "0.0101_{(2)} ＝ 0.25＋0.0625 ＝ 0.3125"],
           visual: { type: "tbl", rows: [
             { label: "位取り", cells: ["2^{-1}", "2^{-2}", "2^{-3}", "2^{-4}"] },
             { label: "0.0101_{(2)}", cells: ["0", "1", "0", "1"] },
-            { label: "足す値", cells: ["—", "0.25", "—", "0.0625"], hl: [1, 3] } ] } },
+            { label: "足す値", cells: ["", "0.25", "", "0.0625"], hl: [1, 3] } ] } },
         { title: "整数部分があるとき",
           text: ["小数点の左の位（…，4，2，1）の値も足す．",
                  "100.11_{(2)} ＝ 4＋0.5＋0.25 ＝ 4.75"],
           visual: { type: "tbl", rows: [
             { label: "位取り", cells: ["2^{2}", "2^{1}", "2^{0}", ".", "2^{-1}", "2^{-2}"] },
             { label: "100.11_{(2)}", cells: ["1", "0", "0", ".", "1", "1"] },
-            { label: "足す値", cells: ["4", "—", "—", ".", "0.5", "0.25"], hl: [0, 4, 5] } ] } },
+            { label: "足す値", cells: ["4", "", "", ".", "0.5", "0.25"], hl: [0, 4, 5] } ] } },
         { title: "10進数→2進数の考え方",
           text: ["<b>小数部分に2を掛けることをくり返し，整数部分を上から順に並べる．</b>",
                  "×2 の答えから整数を取った残りが，次の行の小数部分になる．0.625 の例："],
@@ -185,10 +185,11 @@ var BinFracCore = (function () {
     "P-a": "赤いマスには，1 や 0 ではなく，その位の値を書く",
     "P-b": "赤いマスは，隣の位の値になっている．右へ1つ進むごとに，値は半分",
     "P-c": "赤いマスを見直そう．指数が1つ減ると，値は半分",
-    "P-z": "0 の位は空欄でよい（0 でもよい）．値は 1 になっている位だけ",
+    "P-z": "0 になっている位は空欄でよい（0 でもよい）",
     "P-m": "1 になっている位には，位取りの値を書く．空欄にしない",
-    "P-d": "値は 1 になっている位だけ．0 の位は空欄（0 でもよい）",
-    "S-1": "0 の位の値は足さない．1 になっている位だけ足す",
+    "P-d": "1 になっている位には値を書き，0 になっている位は空欄にする",
+    "P-e": "1 になっている位には，その位の位取りの値を書く",
+    "S-1": "0 になっている位の値は足さない．1 になっている位だけ足す",
     "S-2": "整数部分の位の値も足そう",
     "S-3": "小数部分の位の値も足そう",
     "S-5": "10進数で書こう．2進数の数字のままになっている",
@@ -308,7 +309,7 @@ var BinFracCore = (function () {
 
   /* ---- 段と模範の値 ----
      stage = { id（記録の段の名前），key（問題の中での名前），name（チップの名前），instr，type（bits／x2／place／sum），fields: [{ kind（bit／dec／int），model，name }], … }
-     bits：ビット欄の行（model は 1 文字ずつ）．x2：「×2 の答え」と「整数」．place：全部の位の数の欄（1 になっている位の模範は位取りの値，0 の位の模範は空欄）．sum：和の欄 */
+     bits：ビット欄の行（model は 1 文字ずつ）．x2：「×2 の答え」と「整数」．place：全部の位の数の欄（1 になっている位の模範は位取りの値，0 になっている位の模範は空欄）．sum：和の欄 */
   function fld(kind, model, name, extra) { var f = { kind: kind, model: model, name: name }, k; if (extra) for (k in extra) f[k] = extra[k]; return f; }
   function bitFields(str, prefix) {
     return str.split("").map(function (c, i) { return fld("bit", c, "左から" + (i + 1) + "マス目"); });
@@ -337,9 +338,9 @@ var BinFracCore = (function () {
       out.push({ id: "bits", key: "bits", name: "答え", type: "bits", instr: "整数を上から順に並べて，答えを書こう", fields: bitFields(ints) });
     } else {
       var cols = columnsOf(p), placeFields = [];
-      // 全部の位に欄を置く．1 になっている位の模範は位取りの値，0 の位の模範は空欄（「0」も正解）
+      // 全部の位に欄を置く．1 になっている位の模範は位取りの値，0 になっている位の模範は空欄（「0」も正解）
       cols.forEach(function (col, ci) { placeFields.push(fld("dec", col.bit === "1" ? col.val : "", col.name, { col: ci, one: col.bit === "1" })); });
-      out.push({ id: "place", key: "place", name: "位取りの値", type: "place", cols: cols, instr: "1 になっている位に，位取りの値を書こう．0 の位は空欄でよい", fields: placeFields });
+      out.push({ id: "place", key: "place", name: "位取りの値", type: "place", cols: cols, instr: "1 になっている位に，位取りの値を書こう．0 になっている位は空欄でよい", fields: placeFields });
       out.push({ id: "sum", key: "sum", name: "和", type: "sum", cols: cols, instr: "表に書いた値を足して，10進数にしよう", fields: [fld("dec", fmt16(p.N), "和")] });
     }
     return out;
@@ -355,7 +356,7 @@ var BinFracCore = (function () {
     if (f.kind === "bit") return t === f.model ? "ok" : "wrong";
     if (f.kind === "int") { v = parseIntText(t); return v !== null && v === String(f.model) ? "ok" : "wrong"; }
     q = parseDec(t);
-    if (f.model === "") return qEq(q, "0") ? "ok" : "wrong";                       // 模範が空欄の欄（0 の位）：「0」「0.0」「.0」も同じ値 0 として正解
+    if (f.model === "") return qEq(q, "0") ? "ok" : "wrong";                       // 模範が空欄の欄（0 になっている位）：「0」「0.0」「.0」も同じ値 0 として正解
     return qEq(q, parseDec(f.model)) ? "ok" : "wrong";
   }
   function reverseStr(s) { return s.split("").reverse().join(""); }
@@ -384,10 +385,11 @@ var BinFracCore = (function () {
       return H(st.isInt ? "N-2" : "B-2");
     }
     if (t === "place") {
-      // 誤りの欄を 3 つに分ける：Z＝0 の位に何か書いた／M＝1 になっている位が空欄／V＝1 になっている位に，違う値を書いた
-      var allZ = true, allM = true, allV = true, allZeroOne = true, allNeighbor = true;
+      // 誤りの欄を 3 つに分ける：Z＝0 になっている位に何か書いた／M＝1 になっている位が空欄／V＝1 になっている位に，違う値を書いた
+      var allZ = true, allM = true, allV = true, anyZ = false, allZeroOne = true, allNeighbor = true;
       wrong.forEach(function (wi) {
         var f = st.fields[wi], blank = normText(vals[wi]) === "", qq = parseDec(vals[wi]), left = st.cols[f.col - 1], right = st.cols[f.col + 1], nb = false;
+        if (!f.one) anyZ = true;
         if (!(!f.one && !blank)) allZ = false;
         if (!(f.one && blank)) allM = false;
         if (!(f.one && !blank)) { allV = false; return; }
@@ -398,7 +400,7 @@ var BinFracCore = (function () {
       });
       if (allZ) return H("P-z");
       if (allM) return H("P-m");
-      if (!allV) return H("P-d");
+      if (!allV) return H(anyZ ? "P-d" : "P-e");
       if (allZeroOne) return H("P-a");
       if (allNeighbor) return H("P-b");
       return H("P-c");
@@ -421,7 +423,7 @@ var BinFracCore = (function () {
   function judgeStage(p, st, vals) {
     var empty = [], wrong = [], i, s, states = [];
     for (i = 0; i < st.fields.length; i++) states.push(fieldState(st.fields[i], vals[i]));
-    if (st.type === "place") {                                  // 全部の欄が空のときだけ断る．0 の位の空欄は正解，1 になっている位の空欄は誤り（試行に数える）
+    if (st.type === "place") {                                  // 全部の欄が空のときだけ断る．0 になっている位の空欄は正解，1 になっている位の空欄は誤り（試行に数える）
       if (states.every(function (x) { return x === "empty"; })) for (i = 0; i < states.length; i++) empty.push(i);
       else for (i = 0; i < states.length; i++) { if (states[i] === "wrong" || (states[i] === "empty" && st.fields[i].one)) wrong.push(i); }
     } else {
@@ -747,7 +749,7 @@ var BinFracCore = (function () {
             check(sts[sts.length - 1].id === "bits" && sts[sts.length - 1].fields.map(function (f) { return f.model; }).join("") === ch.ints, "答えの段 " + tag);
           } else {
             check(sts.length === 2 && sts[0].id === "place" && sts[1].id === "sum", "2進数→10進数の段 " + tag);
-            var ones = [], a;                                  // 全部の位に欄：1 になっている位は位取りの値，0 の位は空欄
+            var ones = [], a;                                  // 全部の位に欄：1 になっている位は位取りの値，0 になっている位は空欄
             for (a = 0; a < ib.length; a++) ones.push(ib.charAt(a) === "1" ? orPlaceText("int", ib.length - 1 - a) : "");
             for (a = 0; a < ch.ints.length; a++) ones.push(ch.ints.charAt(a) === "1" ? orPlaceText("frac", -(a + 1)) : "");
             check(sts[0].fields.map(function (f) { return f.model; }).join(",") === ones.join(","), "位取りの値の模範 " + tag + " " + sts[0].fields.map(function (f) { return f.model; }).join(","));
@@ -765,7 +767,7 @@ var BinFracCore = (function () {
       var n = 0;
       function variants(f) {
         var m = f.model, out = [m], t, ip, fp;
-        if (f.kind === "dec" && m === "") return ["", " ", "0", "0.0", ".0", "00", "０", "0。0", " 0 ", "0.00"];             // 0 の位：空欄も「0」も正解
+        if (f.kind === "dec" && m === "") return ["", " ", "0", "0.0", ".0", "00", "０", "0。0", " 0 ", "0.00"];             // 0 になっている位：空欄も「0」も正解
         if (f.kind === "bit") return [m, m === "0" ? "０" : "１", " " + m + " "];
         if (f.kind === "int") return [m, "0" + m, m === "0" ? "０" : "１", " " + m];
         out.push(" " + m + " ", m.replace(/[0-9]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 0xFEE0); }).replace(".", "．"), m.replace(".", "。"));
@@ -809,7 +811,7 @@ var BinFracCore = (function () {
 
       function orWrong(p, st, vals) {                                      // 別実装の判定：欄ごとに { empty, wrong }
         var empty = [], wrong = [], bs, rawE;
-        if (st.type === "place") {                                       // 全部の位に欄．全部空のときだけ断る．0 の位は空欄か 0 が正解，1 になっている位の空欄は誤り
+        if (st.type === "place") {                                       // 全部の位に欄．全部空のときだけ断る．0 になっている位は空欄か 0 が正解，1 になっている位の空欄は誤り
           bs = (p.I > 0 ? orIntBits(p.I) : "") + orChain(p.k).ints; rawE = st.fields.map(function (f, i) { return orEmpty(vals[i]); });
           if (rawE.every(function (x) { return x; })) { st.fields.forEach(function (f, i) { empty.push(i); }); return { empty: empty, wrong: wrong }; }
           st.fields.forEach(function (f, i) {
@@ -872,7 +874,8 @@ var BinFracCore = (function () {
           });
           if (id === "P-z") ok = wrong.length > 0 && allZ;
           else if (id === "P-m") ok = wrong.length > 0 && allM;
-          else if (id === "P-d") ok = wrong.length > 0 && !allZ && !allM && !allV;
+          else if (id === "P-d") ok = wrong.length > 0 && !allZ && !allM && !allV && cls.indexOf("Z") >= 0;
+          else if (id === "P-e") ok = wrong.length > 0 && !allM && !allV && cls.indexOf("Z") < 0;
           else if (id === "P-a") ok = wrong.length > 0 && allV && allP;
           else if (id === "P-b") ok = wrong.length > 0 && allV && allN;
           else if (id === "P-c") ok = wrong.length > 0 && allV && !allP && !allN;
@@ -920,7 +923,7 @@ var BinFracCore = (function () {
               verify(p, st, st.fields.map(function (f) { var col = st.cols[f.col + 1]; return col ? col.val : "3"; }));
               verify(p, st, st.fields.map(function (f, i) { return i % 2 ? "1" : "0"; }));
               verify(p, st, st.fields.map(function () { return ""; }));                                  // 全部空：断る
-              verify(p, st, st.fields.map(function (f, i) { var col = st.cols[i]; return col.val; }));      // 全部の位に位取りの値を書いた（0 の位にも）
+              verify(p, st, st.fields.map(function (f, i) { var col = st.cols[i]; return col.val; }));      // 全部の位に位取りの値を書いた（0 になっている位にも）
             } else if (st.type === "sum") {
               var sc = [];
               for (c = 0; c <= 260; c++) sc.push(decOf16(B(c)));
@@ -957,24 +960,25 @@ var BinFracCore = (function () {
       var last = sts[2]; o = attempt(p, last, newStageState(), last.fields.map(function (f) { return f.model; }));
       check(last.last && o.detail === TEXT.msg.endRows, "最後の行の終わりの一言");
       check(!sts[0].last && attempt(p, sts[0], newStageState(), good).detail === "", "最後でない行には一言を足さない");
-      (function () {                                           // 2進数→10進数の位取りの値：全部の位に欄．0 の位は空欄が正解（0 も正解）．1 になっている位の空欄は誤り．全部空だけ断る
+      (function () {                                           // 2進数→10進数の位取りの値：全部の位に欄．0 になっている位は空欄が正解（0 も正解）．1 になっている位の空欄は誤り．全部空だけ断る
         var q = makeProblem({ kind: "b2d", lv: 1, I: 0, k: 5 }), ps = stagesOf(q)[0], z = newStageState(), r;
         check(ps.fields.map(function (f) { return f.model; }).join("|") === "|0.25||0.0625" && ps.fields.map(function (f) { return f.one; }).join() === "false,true,false,true", "0.0101 の位取りの欄は 4 つ（模範は空・0.25・空・0.0625）");
         r = attempt(q, ps, z, ["", "", "", ""]); check(!r.counted && r.st.attempts === 0 && r.head === "1 になっている位に，位取りの値を入れよう" && r.empty.length === 4, "全部空なら断る（試行に数えない）");
         r = attempt(q, ps, z, [" ", "", "　", "  "]); check(!r.counted, "空白だけも全部空");
-        r = attempt(q, ps, z, ["", "0.25", "", "0.0625"]); check(r.result === "ok1" && r.ok, "0 の位は空欄が正解");
-        r = attempt(q, ps, z, ["0", "0.25", "0.0", "0.0625"]); check(r.result === "ok1", "0 の位に 0 を書いても正解（0.0 も）");
-        r = attempt(q, ps, z, [".0", "0.250", "00", "0.06250"]); check(r.result === "ok1", "0 の位の「.0」「00」，書き方違いの値も正解");
-        r = attempt(q, ps, z, ["", "0.25", "0.125", "0.0625"]); check(r.counted && !r.ok && r.wrong.join() === "2" && r.hint === HINTS["P-z"] && r.st.attempts === 1 && /2⁻³ の位がちがいます/.test(r.detail), "0 の位に位取りの値を書いた誤り（試行に数える・P-z）");
+        r = attempt(q, ps, z, ["", "0.25", "", "0.0625"]); check(r.result === "ok1" && r.ok, "0 になっている位は空欄が正解");
+        r = attempt(q, ps, z, ["0", "0.25", "0.0", "0.0625"]); check(r.result === "ok1", "0 になっている位に 0 を書いても正解（0.0 も）");
+        r = attempt(q, ps, z, [".0", "0.250", "00", "0.06250"]); check(r.result === "ok1", "0 になっている位の「.0」「00」，書き方違いの値も正解");
+        r = attempt(q, ps, z, ["", "0.25", "0.125", "0.0625"]); check(r.counted && !r.ok && r.wrong.join() === "2" && r.hint === HINTS["P-z"] && r.st.attempts === 1 && /2⁻³ の位がちがいます/.test(r.detail), "0 になっている位に位取りの値を書いた誤り（試行に数える・P-z）");
         r = attempt(q, ps, z, ["", "", "", "0.0625"]); check(r.counted && r.wrong.join() === "1" && r.hint === HINTS["P-m"], "1 になっている位の空欄は誤り（試行に数える・P-m）");
-        r = attempt(q, ps, z, ["", "", "0.125", "0.0625"]); check(r.counted && r.wrong.join() === "1,2" && r.hint === HINTS["P-d"], "空欄の誤りと 0 の位の誤りが混ざる（P-d）");
+        r = attempt(q, ps, z, ["", "", "0.125", "0.0625"]); check(r.counted && r.wrong.join() === "1,2" && r.hint === HINTS["P-d"], "空欄の誤りと 0 になっている位の誤りが混ざる（P-d）");
+        r = attempt(q, ps, z, ["", "", "", "0.5"]); check(r.counted && r.wrong.join() === "1,3" && r.hint === HINTS["P-e"], "空欄の誤りと値の誤りが混ざる（1 になっている位だけ・P-e）");
         r = attempt(q, ps, z, ["", "0.5", "", "0.0625"]); check(r.counted && r.wrong.join() === "1" && r.hint === HINTS["P-b"], "1 の位の値違い（P-b）");
         r = attempt(q, ps, { attempts: 1, result: null }, ["", "", "", ""]); check(!r.counted && r.st.attempts === 1, "2回目でも全部空なら断る");
-        r = attempt(q, ps, { attempts: 1, result: null }, ["", "0.5", "", ""]); check(r.reveal && r.result === "rev" && r.wrong.join() === "1,3", "2回目も誤りなら値を見せる（0 の位は空欄のまま）");
+        r = attempt(q, ps, { attempts: 1, result: null }, ["", "0.5", "", ""]); check(r.reveal && r.result === "rev" && r.wrong.join() === "1,3", "2回目も誤りなら値を見せる（0 になっている位は空欄のまま）");
         q = makeProblem({ kind: "b2d", lv: 2, I: 4, k: 12 }); ps = stagesOf(q)[0];
         check(ps.fields.map(function (f) { return f.model; }).join("|") === "4|||0.5|0.25", "中級 100.11：整数部分の位（8・4・2・1）にも同じ規則（模範は 4・空・空・0.5・0.25）");
-        r = attempt(q, ps, z, ["4", "0", "", "0.5", "0.25"]); check(r.result === "ok1", "中級：0 の位の 0 と空欄が混ざっても正解");
-        r = attempt(q, ps, z, ["4", "2", "", "0.5", "0.25"]); check(r.hint === HINTS["P-z"] && r.wrong.join() === "1", "中級：整数部分の 0 の位に値を書いた誤り");
+        r = attempt(q, ps, z, ["4", "0", "", "0.5", "0.25"]); check(r.result === "ok1", "中級：0 になっている位の 0 と空欄が混ざっても正解");
+        r = attempt(q, ps, z, ["4", "2", "", "0.5", "0.25"]); check(r.hint === HINTS["P-z"] && r.wrong.join() === "1", "中級：整数部分の 0 になっている位に値を書いた誤り");
       })();
       // 全段を通して記録に入れる
       var rec = newRec(), stages = stagesOf(p), results = stages.map(function () { return "ok1"; });
@@ -1210,7 +1214,7 @@ var BinFracCore = (function () {
         var p = makeProblem({ kind: f[0], lv: f[2] ? 2 : 1, I: f[2], k: f[3] }), sts = stagesOf(p), rows = sts.filter(function (x) { return x.type === "x2"; });
         check(rows.map(function (r) { return r.fields[0].model; }).join() === f[5].join() && rows.map(function (r) { return r.fields[1].model; }).join() === f[6] && sts[sts.length - 1].fields.map(function (x) { return x.model; }).join("") === f[4], "紙の例 " + f[1]);
       });
-      var FB = [["0.111", 0, 14, ["0.5", "0.25", "0.125"], "0.875"], ["0.0101", 0, 5, ["", "0.25", "", "0.0625"], "0.3125"], ["0.1001", 0, 9, ["0.5", "", "", "0.0625"], "0.5625"], ["100.11", 4, 12, ["4", "", "", "0.5", "0.25"], "4.75"], ["1111.1111", 15, 15, ["8", "4", "2", "1", "0.5", "0.25", "0.125", "0.0625"], "15.9375"]];   // 位ごとの模範（0 の位は空欄）
+      var FB = [["0.111", 0, 14, ["0.5", "0.25", "0.125"], "0.875"], ["0.0101", 0, 5, ["", "0.25", "", "0.0625"], "0.3125"], ["0.1001", 0, 9, ["0.5", "", "", "0.0625"], "0.5625"], ["100.11", 4, 12, ["4", "", "", "0.5", "0.25"], "4.75"], ["1111.1111", 15, 15, ["8", "4", "2", "1", "0.5", "0.25", "0.125", "0.0625"], "15.9375"]];   // 位ごとの模範（0 になっている位は空欄）
       FB.forEach(function (f) {
         var p = makeProblem({ kind: "b2d", lv: f[1] ? 2 : 1, I: f[1], k: f[2] }), sts = stagesOf(p);
         check(titleOf(p) === f[0] + "(2)" && sts[0].fields.map(function (x) { return x.model; }).join() === f[3].join() && sts[1].fields[0].model === f[4], "紙・教科書の例 " + f[0]);
