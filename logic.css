@@ -202,13 +202,16 @@ body.lg-top { align-items: flex-start; }
 .lg-tutorial .tutorial-visual { min-height: 0; padding: 0.6rem 0.8rem; }
 .lg-learn-h { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.4rem; }
 .lg-learn-p { margin-bottom: 0.3rem; }
-.lg-vsvg { max-width: 380px; }
+.lg-vsvg { max-width: 520px; }
+.lg-vnote { font-weight: 700; font-size: 0.95rem; color: var(--accent-green); margin-top: 0.3rem; }
 .lg-vtables { display: flex; flex-wrap: wrap; gap: 1.2rem; }
 .lg-vt { display: grid; gap: 0.2rem; }
 .lg-vt b { font-size: 0.9rem; color: var(--accent-blue); }
 .lg-vhalf { display: flex; flex-wrap: wrap; gap: 0.8rem 1.4rem; align-items: flex-start; }
-.lg-vhalf .lg-svg { width: 340px; max-width: 100%; }
-.lg-vtrace .lg-svg { width: 340px; max-width: 100%; }
+.lg-vhalf .lg-svg { width: 380px; max-width: 100% !important; }
+.lg-vtrace .lg-svg { width: 460px; max-width: 100% !important; }
+.lg-vhalf, .lg-vtrace { max-width: 100%; }
+.lg-vhalf .lg-mini th, .lg-vhalf .lg-mini td { padding: 0.1rem 0.35rem; min-width: 1.4rem; }
 .lg-fade { animation: lg-fadein 0.5s ease both; }
 @keyframes lg-fadein { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .lg-fade { animation: none; } }

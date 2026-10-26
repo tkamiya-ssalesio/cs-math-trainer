@@ -524,7 +524,7 @@
       svg.appendChild(sv("line", { x1: xs[i] + nd.w, y1: 8 + nd.h / 2, x2: xs[i] + nd.w + 12, y2: 8 + nd.h / 2, "class": "lg-wire" }));
       svg.appendChild(sv("text", { x: xs[i] + 24, y: 62, "class": "lg-vcap", "text-anchor": "middle" }, nm[i]));
     });
-    svg.style.maxWidth = "360px";
+    svg.style.maxWidth = "520px";
     return svg;
   }
   function switchSym(svg, x, y, open) {                                        // 横向きのスイッチ（教科書の図の描き直し．写真は使わない）
@@ -545,7 +545,7 @@
     ln(250, 40, 262, 40); ln(262, 40, 262, 40); ln(262, 40, 290, 40); bulb(299, 40); ln(308, 40, 336, 40); ln(336, 40, 336, 75); ln(336, 75, 250, 75); ln(250, 75, 250, 40);
     ln(290, 40, 290, 24); ln(290, 24, 300, 24); ln(308, 40, 308, 24); ln(308, 24, 300, 24);
     cap(294, 14, "A"); cap(294, 100, "NOT＝反転"); cap(294, 116, "入ると消え，切れると点く");
-    svg.style.maxWidth = "360px";
+    svg.style.maxWidth = "520px";
     return svg;
   }
   function miniTable(headers, rows, hl) {                                      // hl：強調する列の番号
@@ -564,14 +564,14 @@
     return box;
   }
   function visTrace() {
-    var c = C.CIRC.p05, wrap = el("div", "lg-vtrace"), fig = drawCircuit(c, { tags: true }), lay = C.layoutCircuit(c, true), v = {}, r = 2, k = 0;
+    var c = C.CIRC.p05, wrap = el("div", "lg-vtrace"), fig = drawCircuit(c, { tags: true, scale: 1.8 }), lay = C.layoutCircuit(c, true), v = {}, r = 2, k = 0;
     var vals = { g1: 0, g2: 1, g3: 1 };                       // A＝1，B＝0 の行（表の 3 行目）の値．selfTest が評価器と照合する
     wrap.appendChild(fig);
     lay.tags.forEach(function (t) {
       var b = sv("text", { x: t.x + t.w + 3, y: t.y + 9.3, "class": "lg-val lg-fade", style: "animation-delay:" + (0.4 + k * 0.7) + "s" }, "＝" + vals[t.net]); k++;
       fig.appendChild(b);
     });
-    lay.trunks.forEach(function (t) { fig.appendChild(sv("text", { x: t.x, y: 12, dx: 8, "class": "lg-val", "text-anchor": "start" }, "＝" + LEARN_TRACE[t.name])); });
+    wrap.appendChild(el("p", "lg-vnote", "入力：A＝" + LEARN_TRACE.A + "，B＝" + LEARN_TRACE.B + "（表の 3 行目）"));
     lay.nodes.filter(function (nd) { return nd.kind === "out"; }).forEach(function (nd) { fig.appendChild(sv("text", { x: nd.x + nd.w / 2, y: nd.y - 3, "class": "lg-val lg-fade", style: "animation-delay:" + (0.4 + k * 0.7) + "s", "text-anchor": "middle" }, "＝" + vals.g3)); });
     return wrap;
   }
@@ -582,15 +582,15 @@
   }
   function LogicCoreEval(c) { return C.evalOf(c); }
   function visHalf() {
-    var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad1, { tags: true });
+    var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad1, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad1", [["線1(C)", "g1"], ["線2", "g2"], ["線3", "g3"], ["S", "g4"]], [3, 4]));
+    box.appendChild(tableFromEval("ad1", [["線1(C)", "g1"], ["線2", "g2"], ["線3", "g3"], ["S", "g4"]], [2, 5]));
     return box;
   }
   function visFull() {
-    var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad2, { tags: true });
+    var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad2, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad2", [["線1", "h1.S"], ["線2", "h1.C"], ["線3", "h2.C"], ["S", "h2.S"], ["Co", "o1"]], [5, 6]));
+    box.appendChild(tableFromEval("ad2", [["線1", "h1.S"], ["線2", "h1.C"], ["線3", "h2.C"], ["S", "h2.S"], ["Co", "o1"]], [6, 7]));
     return box;
   }
   function visual(spec) {

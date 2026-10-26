@@ -1037,8 +1037,6 @@ var LogicCore = (function () {
           check(k >= 1 && k <= 2, "③ 正解は 1 つか 2 つ（4 つ全部は作らない） " + p.key + " k=" + k);
           if (k === 1) k1++; else k2++;
           check(p.options.filter(function (op) { return op.correct; }).length === k, "③ 正解の数");
-          // 題の表を直近 5 問と重ねない
-          check(recent.slice(0, -1).indexOf(p.avoid) < 0 || true, "");
           got[p.tbl] = 1;
           if (i < 200) {                                       // 選択の 16 通りすべて：集合が一致のときだけ正解．C-1 の反例の行は実際に表と違う
             var st = stagesOf(p)[0], mask, vals, jr, corr = p.options.map(function (op) { return op.correct; });
@@ -1234,7 +1232,7 @@ var LogicCore = (function () {
       rep.extra.screenStringsChecked = all.length;
       check(checkTexts(all).length === 0, "画面の禁止語 " + checkTexts(all).slice(0, 2).join("／"));
       check(checkTexts(["¬A"]).length === 1 && checkTexts(["論理式"]).length === 1 && checkTexts(["真・偽"]).length >= 1 && checkTexts(["排他的論理和"]).length === 1 && checkTexts(["真理値表"]).length === 0 && checkTexts(["偽"]).length === 1, "禁止語の検査が働く");
-      all.forEach(function (t) { check(!/[、。]/.test(t), "全角の句読点（，．）にそろえる: " + t); check(!/[,.](?![0-9])(?=\s|$)/.test(t.replace(/[A-Za-z]\.[A-Za-z]/g, "")) || true, ""); });
+      all.forEach(function (t) { check(!/[、。]/.test(t), "全角の句読点（，．）にそろえる: " + t); });
       // 部品の定義が工程B入口（論点 6）の文言どおり
       check(TEXT.defs[0] === "論理積回路（AND 回路）：二つの入力がともに 1 のときだけ，1 を出力する．" && TEXT.defs[1] === "論理和回路（OR 回路）：入力の少なくとも一方が 1 であれば，1 を出力する．" && TEXT.defs[2] === "否定回路（NOT 回路）：入力した信号を反転した値を出力する．", "三つの部品の定義");
       check(TEXT.defs.concat(TEXT.defsAdder).every(function (t) { return !/という/.test(t) && /：/.test(t); }), "重要用語は「用語：説明」の順（「〜という」にしない）");
