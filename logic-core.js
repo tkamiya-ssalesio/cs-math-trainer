@@ -260,7 +260,8 @@ var LogicCore = (function () {
   ];
   var Q_DEFS = [   // ③ の選択肢にだけ加える回路（初級）
     ["q01", "AND(OR(A,B),NOT(AND(A,B)))", "0110"], ["q02", "OR(AND(A,NOT(B)),AND(NOT(A),B))", "0110"], ["q03", "OR(AND(A,B),AND(NOT(A),NOT(B)))", "1001"],
-    ["q04", "OR(A,NOT(A))", "1111"], ["q05", "AND(A,B)", "0001"], ["q06", "OR(A,B)", "0111"]
+    ["q04", "OR(A,NOT(A))", "1111"], ["q05", "AND(A,B)", "0001"], ["q06", "OR(A,B)", "0111"],
+    ["q07", "AND(OR(NOT(A),B),AND(A,B))", "0001"], ["q08", "OR(OR(A,B),OR(NOT(A),NOT(B)))", "1111"]       // 学習ノート思5 の図のイ（0001）・エ（1111）．ダミー専用
   ];
   var Z_DEFS = [   // ③ 中級のダミー専用（常に 1／常に 0）．入力は A・B・C のまま
     ["z01", "OR(A,NOT(A))", "11111111"], ["z02", "AND(A,NOT(A))", "00000000"]
@@ -569,7 +570,7 @@ var LogicCore = (function () {
   function lastOf(recent) { return recent.length ? recent[recent.length - 1] : null; }
   function shuffle(a) { var out = a.slice(), i, j, t; for (i = out.length - 1; i > 0; i--) { j = Math.floor(rng() * (i + 1)); t = out[i]; out[i] = out[j]; out[j] = t; } return out; }
   function sample(a, k) { return shuffle(a).slice(0, k); }
-  var DUMMY_ONLY = ["q04", "q05", "q06", "z01", "z02"];
+  var DUMMY_ONLY = ["q04", "q05", "q06", "q07", "q08", "z01", "z02"];
   function dummyOnlyTable(pool, t) { return pool.filter(function (c) { return tableOf(c) === t && DUMMY_ONLY.indexOf(c.id) < 0; }).length === 0; }
   function chooseSpec(lv, recent) {
     var pool = lv === 1 ? P_LIST.concat(Q_LIST) : R_LIST.concat(Z_LIST), tables = [], target, cands, withT, k, correct, others, dummies, i, tab;
@@ -905,6 +906,7 @@ var LogicCore = (function () {
       p09: function (A, B) { return ~A | B; }, p10: function (A, B) { return A | ~B; },
       q01: function (A, B) { return (A | B) & ~(A & B); }, q02: function (A, B) { return (A & ~B) | (~A & B); }, q03: function (A, B) { return (A & B) | (~A & ~B); },
       q04: function (A) { return A | ~A; }, q05: function (A, B) { return A & B; }, q06: function (A, B) { return A | B; },
+      q07: function (A, B) { return (~A | B) & (A & B); }, q08: function (A, B) { return (A | B) | (~A | ~B); },
       b_and: function (A, B) { return A & B; }, b_or: function (A, B) { return A | B; }, b_not: function (A) { return ~A; }
     };
     var OR3 = {
@@ -934,7 +936,17 @@ var LogicCore = (function () {
         check(String(v.g1[r]) + String(v.g4[r]) === a[2] && (a[0] + a[1]).toString(2) === String(parseInt(a[2], 2).toString(2)), "F" + (6 + k) + " " + a[0] + "＋" + a[1]);
       });
       check(tableOf(CIRC.p05) === "1011", "F10 章末問題12 1011");
-      check(tableOf(CIRC.q02) === "0110" && tableOf(CIRC.q01) === "0110" && tableOf(CIRC.q05) === "0001" && tableOf(CIRC.q04) === "1111", "F11〜F14 思5 ア 0110・ウ 0110・イ 0001・エ 1111");
+      check(tableOf(CIRC.q02) === "0110" && tableOf(CIRC.q01) === "0110" && tableOf(CIRC.q07) === "0001" && tableOf(CIRC.q08) === "1111", "F11〜F14 思5 ア（q02）0110・ウ（q01）0110・イ（q07）0001・エ（q08）1111");
+      (function () {                                                                                          // イ・エの全入力行を別の式で確かめる．q07 は A＝1，B＝1 のときだけ 1（OR(NOT A,B)＝1 かつ AND＝1）
+        var v7 = evalOf(CIRC.q07), v8 = evalOf(CIRC.q08), r, A, B;
+        check(CIRC.q07.gates.map(function (g) { return g.t; }).sort().join() === "AND,AND,NOT,OR" && CIRC.q08.gates.map(function (g) { return g.t; }).sort().join() === "NOT,NOT,OR,OR,OR", "思5 イ（NOT・OR・AND・AND の 4 部品）・エ（OR×3・NOT×2 の 5 部品）の部品");
+        check(CIRC.q08.wires.length === 4 && CIRC.q07.wires.length === 3, "q07・q08 の途中の線の数（3・4 本．上限 4 本以内）");
+        for (r = 0; r < 4; r++) {
+          A = r >> 1; B = r & 1;
+          check(v7[CIRC.q07.outs[0].src][r] === ((((1 - A) | B) === 1 && (A & B) === 1) ? 1 : 0) && v7[CIRC.q07.outs[0].src][r] === (A === 1 && B === 1 ? 1 : 0), "q07 は A＝1，B＝1 のときだけ 1（行 " + r + "）");
+          check(v8[CIRC.q08.outs[0].src][r] === 1 && v8.g1[r] === (A | B) && v8.g2[r] === 1 - A && v8.g3[r] === 1 - B && v8.g4[r] === ((1 - A) | (1 - B)), "q08 は常に 1（行 " + r + "）．途中の線 OR(A,B)・NOT A・NOT B・OR(NOT A,NOT B)");
+        }
+      })();
       check(tableOf(CIRC.p01) === "1110" && tableOf(CIRC.p02) === "0100" && tableOf(CIRC.p04) === "1110", "F15〜F17 昨年度 #01・#02・#03");
       check(tableOf(CIRC.q05) === "0001", "F18 #04 0001");
       check(tableOf(CIRC.r01) === "01010111" && tableOf(CIRC.r02) === "11010001", "F19・F20 #05・#06");
@@ -965,8 +977,8 @@ var LogicCore = (function () {
         check(t === EXPECT[id], "SPEC の表と一致 " + id + " " + t + " " + EXPECT[id]);
         cnt++;
       });
-      check(P_LIST.length === 10 && R_LIST.length === 21 && Q_LIST.length === 6 && Z_LIST.length === 2 && BASIC_LIST.length === 3, "テンプレートの数（② 10＋21，③ の追加 6＋2，① 3）");
-      check(ids.length === 10 + 21 + 6 + 2 + 3, "照合した回路の数 " + ids.length);
+      check(P_LIST.length === 10 && R_LIST.length === 21 && Q_LIST.length === 8 && Z_LIST.length === 2 && BASIC_LIST.length === 3, "テンプレートの数（② 10＋21，③ の追加 8＋2，① 3）");
+      check(ids.length === 10 + 21 + 8 + 2 + 3, "照合した回路の数 " + ids.length);
       rep.extra.templatesChecked = cnt;
       // 鏡は A と B を入れ替えた回路．表は A・B の入れ替え（行 01 と 10 の入れ替え）
       ["ad1", "ad2"].forEach(function (id) {
@@ -1020,7 +1032,7 @@ var LogicCore = (function () {
       check(groups(R_LIST) === "r01/r21 r03/r20 r04/r19 r06/r16 r07/r17 r14/r18", "中級 ② の同じ表の組 " + groups(R_LIST));
       check(P_LIST.map(function (c) { return tableOf(c); }).filter(function (t, i, a) { return a.indexOf(t) === i; }).length === 6, "初級 ② は表 6 種");
       check(R_LIST.map(function (c) { return tableOf(c); }).filter(function (t, i, a) { return a.indexOf(t) === i; }).length === 15, "中級 ② は表 15 種");
-      check(P_LIST.concat(Q_LIST).map(function (c) { return tableOf(c); }).filter(function (t, i, a) { return a.indexOf(t) === i; }).length === 11 && P_LIST.concat(Q_LIST).length === 16, "初級 ③ は 16 回路・表 11 種");
+      check(P_LIST.concat(Q_LIST).map(function (c) { return tableOf(c); }).filter(function (t, i, a) { return a.indexOf(t) === i; }).length === 11 && P_LIST.concat(Q_LIST).length === 18, "初級 ③ は 18 回路・表 11 種");
       check(R_LIST.concat(Z_LIST).map(function (c) { return tableOf(c); }).filter(function (t, i, a) { return a.indexOf(t) === i; }).length === 17, "中級 ③ の表の種類 17");
       function canon(c) {                                    // 可換な部品の入力を並べ替えた正規形（鏡で同じになる回路を 1 つに数える）
         var memo = {};
@@ -1077,6 +1089,24 @@ var LogicCore = (function () {
         check(Object.keys(got).length === Object.keys(allT).length, "③ 難易度 " + lv + "：全題の表が出る（" + Object.keys(got).length + "／" + Object.keys(allT).length + "）");
       }
       check(k1 > nPer * 0.2 && k2 > nPer * 0.2, "③ 正解の個数 1 と 2 が半々くらい " + k1 + "／" + k2);
+      (function () {                                          // 思5 のイ（q07）・エ（q08）：ダミーとして出る．題にはならない．同じ問題に同じ表のダミー（q05 と q07，q04 と q08）は出ない
+        var appear = { q07: 0, q08: 0, q05: 0, q04: 0 }, i2, p2, both = 0, reach = 0, sp, set;
+        for (i2 = 0; i2 < nPer * 2; i2++) {
+          p2 = gen("choose", 1, []);
+          ["q07", "q08", "q05", "q04"].forEach(function (id) { if (p2.opts.indexOf(id) >= 0) appear[id]++; });
+          if ((p2.opts.indexOf("q05") >= 0 && p2.opts.indexOf("q07") >= 0) || (p2.opts.indexOf("q04") >= 0 && p2.opts.indexOf("q08") >= 0)) both++;
+          check(p2.tbl !== "0001" && p2.tbl !== "1111", "③ 題に 0001・1111 は出ない（q05・q07・q04・q08 はダミー専用）" + p2.key);
+          p2.options.forEach(function (op) { if (op.id === "q07" || op.id === "q08") check(op.correct === false && op.table === (op.id === "q07" ? "0001" : "1111") && oracleTable(op.id) === op.table && op.table !== p2.tbl, "③ q07・q08 はダミー（題の表と違う）" + p2.key); });
+        }
+        check(appear.q07 > 0 && appear.q08 > 0 && appear.q05 > 0 && appear.q04 > 0, "③ 初級：q07・q08・q05・q04 がダミーとして出る " + JSON.stringify(appear));
+        check(both === 0, "③ 同じ表のダミー（q05 と q07，q04 と q08）が同じ問題に出ない");
+        check(appear.q07 > appear.q05 * 0.5 && appear.q07 < appear.q05 * 2, "③ q07 と q05 は特別扱いなく同じくらい出る（" + appear.q07 + "／" + appear.q05 + "）");
+        for (i2 = 0; i2 < 60000; i2++) { sp = chooseSpec(1, []); set = sp.opts.slice().sort().join(); if (sp.target === "0110" && set === "q01,q02,q07,q08") reach++; }
+        check(reach > 0, "③ 思5 と同じ 4 つ（ア＝q02，イ＝q07，ウ＝q01，エ＝q08）が題 0110 の問題として出うる（60000 問中 " + reach + "）");
+        var pp = makeProblem({ kind: "choose", lv: 1, target: "0110", opts: ["q02", "q07", "q01", "q08"] }), cor = pp.options.filter(function (o) { return o.correct; }).map(function (o) { return o.label; }).join("");
+        check(cor === "アウ" && pp.options[1].table === "0001" && pp.options[3].table === "1111", "思5 の問題：正解は ア・ウ，イは 0001，エは 1111");
+        rep.extra.chooseDummy = appear;
+      })();
       // 直近 5 問と題の表が重ならない
       [1, 2].forEach(function (lv2) {
         var recent2 = [], j2, q, bad = 0, hist = [];

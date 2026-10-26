@@ -1031,6 +1031,8 @@
         var seenT = {}, k, p, tries = 0;
         while (tries++ < 600) { p = C.gen("choose", lv, []); if (seenT[p.tbl]) continue; seenT[p.tbl] = 1; each({ kind: "choose", lv: lv, target: p.tbl, opts: p.opts }); }
       });
+      each({ kind: "choose", lv: 1, target: "0110", opts: ["q02", "q07", "q01", "q08"] });          // 思5 の 4 つ（ア＝q02，イ＝q07，ウ＝q01，エ＝q08）．q07・q08 の小図を全状態で測る
+      each({ kind: "choose", lv: 1, target: "1110", opts: ["q08", "q07", "p01", "p04"] });
       out.problems += E.exProblems;
     })();
     (function () {                                       // 全問題の全段：2回目も誤りで値を見せた状態
