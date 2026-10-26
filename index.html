@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="binary-calc.css">
   <link rel="stylesheet" href="binary-fraction.css">
+  <link rel="stylesheet" href="logic.css">
 </head>
 <body>
   <main class="app-container">
@@ -46,6 +47,11 @@
           <button class="card-btn" id="bf-open-btn" data-category="bin-fraction">
             <span class="card-title" id="bf-open-title">2進数の小数</span>
             <span class="card-desc" id="bf-open-desc">2進数の小数と10進数の小数を，1段ずつ入力して変換します．時間制限はありません．</span>
+          </button>
+          <!-- 6つ目のカテゴリ：論理回路．画面は logic.js が受け持つ（category-select-btn ではない） -->
+          <button class="card-btn" id="lg-open-btn" data-category="logic">
+            <span class="card-title" id="lg-open-title">論理回路</span>
+            <span class="card-desc" id="lg-open-desc">AND・OR・NOT の働きと，その組み合わせ（半加算回路）を，図を見て真理値表に書く練習です．時間制限はありません．</span>
           </button>
         </div>
       </div>
@@ -378,9 +384,111 @@
       <p class="bf-note bf-warn" id="bf-storage-note" hidden></p>
       <pre id="bf-selftest" class="bf-selftest" hidden></pre>
     </section>
+
+    <!-- =============== 6. 論理回路（6つ目のカテゴリ）：サブメニュー／解説／練習 =============== -->
+    <section id="lg-submenu-screen" class="screen">
+      <h2 class="section-title" id="lg-submenu-title" style="margin-bottom: 0.8rem; text-align: center; color: var(--accent-cyan); font-size: 1.5rem;">論理回路</h2>
+      <p class="lg-first" id="lg-first"></p>
+      <div class="menu-section">
+        <h3 class="section-title" id="lg-level-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">難易度の選択</h3>
+        <div class="lg-diffsel" id="lg-diff" role="group" aria-label="難易度"></div>
+        <p class="lg-note" id="lg-level-note"></p>
+      </div>
+      <div class="menu-section">
+        <h3 class="section-title" id="lg-action-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">学習アクションの選択</h3>
+        <div class="mode-grid lg-actions" style="grid-template-columns: 1fr; gap: 0.8rem;">
+          <button class="card-btn lg-action-btn" data-action="learn" style="border-color: rgba(79, 172, 254, 0.15);">
+            <span class="card-title" id="lg-learn-title" style="color: var(--accent-blue);"></span>
+            <span class="card-desc" id="lg-learn-desc"></span>
+          </button>
+          <button class="card-btn lg-action-btn" data-action="basic" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="lg-kind-title-basic" style="color: var(--accent-green);"></span>
+            <span class="card-desc" id="lg-kind-desc-basic"></span>
+            <span class="lg-ticks" data-kind="basic"></span>
+          </button>
+          <button class="card-btn lg-action-btn" data-action="combine" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="lg-kind-title-combine" style="color: var(--accent-green);"></span>
+            <span class="card-desc" id="lg-kind-desc-combine"></span>
+            <span class="lg-ticks" data-kind="combine"></span>
+          </button>
+          <button class="card-btn lg-action-btn" data-action="choose" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="lg-kind-title-choose" style="color: var(--accent-green);"></span>
+            <span class="card-desc" id="lg-kind-desc-choose"></span>
+            <span class="lg-ticks" data-kind="choose"></span>
+          </button>
+          <button class="card-btn lg-action-btn" data-action="adder" style="border-color: rgba(255, 0, 128, 0.15);">
+            <span class="card-title" id="lg-kind-title-adder" style="color: #ff3366;"></span>
+            <span class="card-desc" id="lg-kind-desc-adder"></span>
+            <span class="lg-ticks" data-kind="adder"></span>
+          </button>
+        </div>
+      </div>
+      <button id="lg-submenu-back-btn" class="btn-secondary" style="width: 100%; margin-top: 1.2rem;">カテゴリ選択に戻る</button>
+    </section>
+
+    <section id="lg-learn-screen" class="screen">
+      <div class="learn-header">
+        <h2 class="section-title lg-learn-screen-title" id="lg-learn-screen-title">論理回路の解説</h2>
+      </div>
+      <div class="learn-body lg-learn-body">
+        <div id="lg-tutorial-card" class="tutorial-card lg-tutorial"></div>
+      </div>
+      <div class="learn-footer">
+        <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.8rem;">
+          <button id="lg-learn-prev" class="btn-secondary" style="flex: 1;">前へ</button>
+          <div id="lg-step-indicators" style="display: flex; gap: 0.4rem; justify-content: center; flex: 1;"></div>
+          <button id="lg-learn-next" class="btn-primary" style="flex: 1; margin-top: 0;">次へ</button>
+        </div>
+        <button id="lg-learn-close" class="btn-secondary lg-learn-close">メニューに戻る</button>
+      </div>
+    </section>
+
+    <section id="lg-play-screen" class="screen">
+      <div class="lg-topbar">
+        <button type="button" class="lg-linkbtn" id="lg-back-btn">← 戻る</button>
+        <div class="lg-kinds" id="lg-kinds" role="group" aria-label="種類"></div>
+        <div class="lg-lvsw" id="lg-lvsw" role="group" aria-label="難易度"></div>
+      </div>
+      <p class="lg-usage" id="lg-usage"></p>
+      <div class="lg-panel" id="lg-panel">
+        <section class="lg-work" id="lg-work" aria-label="回路と表">
+          <div class="lg-fig" id="lg-fig"></div>
+          <div class="lg-sheetwrap" id="lg-sheetwrap"><div class="lg-sheet" id="lg-sheet"></div></div>
+          <div class="lg-opts" id="lg-opts" role="group" aria-label="回路を選ぶ"></div>
+        </section>
+        <section class="lg-side" aria-label="手順">
+          <div class="lg-sidemain">
+            <div class="lg-qhead"><h2 class="lg-qtitle" id="lg-qtitle"></h2><div class="lg-streak" id="lg-streak"></div></div>
+            <p class="lg-qkind" id="lg-qkind"></p>
+            <p class="lg-stagehead" id="lg-stagehead"></p>
+            <p class="lg-instr" id="lg-instr"></p>
+            <ol class="lg-chips" id="lg-chips" aria-label="段の結果"></ol>
+            <div class="lg-btnrow"><button type="button" class="btn-primary lg-btn" id="lg-check"></button><span class="lg-enterhint" id="lg-enterhint"></span></div>
+          </div>
+          <div class="lg-sideres">
+            <p class="lg-cellmsg" id="lg-cellmsg" role="status" aria-live="polite"></p>
+            <div class="lg-feedback" id="lg-feedback" role="status" aria-live="polite"></div>
+            <p class="lg-extra" id="lg-extra" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+      </div>
+      <div class="lg-below">
+        <details id="lg-half" class="lg-details lg-half" hidden><summary id="lg-half-sum"></summary><div id="lg-half-body"></div></details>
+        <details id="lg-defs" class="lg-details"><summary id="lg-defs-sum"></summary><div id="lg-defs-body"></div></details>
+        <details id="lg-mine" class="lg-details lg-mine"><summary id="lg-mine-sum"></summary><div id="lg-mine-body"></div></details>
+        <div class="lg-foot"><button type="button" class="lg-linkbtn" id="lg-reset-btn">記録を消す</button></div>
+      </div>
+      <div class="lg-confirm" id="lg-reset-confirm" role="alertdialog" aria-labelledby="lg-reset-ask" hidden>
+        <p id="lg-reset-ask"></p>
+        <div class="lg-btnrow"><button type="button" class="btn-secondary lg-smallbtn" id="lg-reset-no"></button><button type="button" class="btn-primary lg-smallbtn" id="lg-reset-yes"></button></div>
+      </div>
+      <p class="lg-note lg-warn" id="lg-storage-note" hidden></p>
+      <pre id="lg-selftest" class="lg-selftest" hidden></pre>
+    </section>
   </main>
   <p class="bc-selftest-note" id="bc-selftest-note" role="status" hidden></p>
   <p class="bf-selftest-note" id="bf-selftest-note" role="status" hidden></p>
+  <p class="lg-selftest-note" id="lg-selftest-note" role="status" hidden></p>
 
   <!-- =============== 5. 難易度選択モーダル =============== -->
   <!-- =============== 5. トレーニング設定モーダル =============== -->
@@ -433,5 +541,8 @@
   <!-- 2進数の小数: コア（DOM に触らない）→ 画面 -->
   <script src="binary-fraction-core.js"></script>
   <script src="binary-fraction.js"></script>
+  <!-- 論理回路: コア（DOM に触らない）→ 画面 -->
+  <script src="logic-core.js"></script>
+  <script src="logic.js"></script>
 </body>
 </html>

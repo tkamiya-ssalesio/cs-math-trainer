@@ -700,7 +700,7 @@
     }
     /* 既存の画面に影響しないこと：メニュー・サブメニューの作りと，既存カテゴリの遷移（解説・タイマー・コンボには触れない） */
     (function () {
-      var cats = document.querySelectorAll(".category-select-btn"), cards = document.querySelectorAll("#menu-screen .card-btn:not(#bf-open-btn)"), i, ids = ["menu-screen", "submenu-screen", "game-screen", "result-screen", "learn-screen", "settings-modal", "timer-bar", "combo-display", "answer-input", "submit-btn"];
+      var cats = document.querySelectorAll(".category-select-btn"), cards = document.querySelectorAll("#menu-screen .card-btn:not(#bf-open-btn):not(#lg-open-btn)"), i, ids = ["menu-screen", "submenu-screen", "game-screen", "result-screen", "learn-screen", "settings-modal", "timer-bar", "combo-display", "answer-input", "submit-btn"];
       out.checked += 4 + ids.length;
       if (cats.length !== 3) fail("既存の 3 カテゴリのボタンが " + cats.length + " 個");
       if (cards.length !== 4) fail("メニューのカードが " + cards.length + " 枚（既存 3＋新 1 のはず）");
