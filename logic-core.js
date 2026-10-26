@@ -261,7 +261,7 @@ var LogicCore = (function () {
   var Q_DEFS = [   // ③ の選択肢にだけ加える回路（初級）
     ["q01", "AND(OR(A,B),NOT(AND(A,B)))", "0110"], ["q02", "OR(AND(A,NOT(B)),AND(NOT(A),B))", "0110"], ["q03", "OR(AND(A,B),AND(NOT(A),NOT(B)))", "1001"],
     ["q04", "OR(A,NOT(A))", "1111"], ["q05", "AND(A,B)", "0001"], ["q06", "OR(A,B)", "0111"],
-    ["q07", "AND(OR(NOT(A),B),AND(A,B))", "0001"], ["q08", "OR(OR(A,B),OR(NOT(A),NOT(B)))", "1111"]       // 学習ノート思5 の図のイ（0001）・エ（1111）．ダミー専用
+    ["q07", "AND(OR(A,NOT(B)),AND(A,B))", "0001"], ["q08", "OR(OR(A,B),OR(NOT(A),NOT(B)))", "1111"]       // 学習ノート思5 の図のイ（0001）・エ（1111）．ダミー専用
   ];
   var Z_DEFS = [   // ③ 中級のダミー専用（常に 1／常に 0）．入力は A・B・C のまま
     ["z01", "OR(A,NOT(A))", "11111111"], ["z02", "AND(A,NOT(A))", "00000000"]
@@ -906,7 +906,7 @@ var LogicCore = (function () {
       p09: function (A, B) { return ~A | B; }, p10: function (A, B) { return A | ~B; },
       q01: function (A, B) { return (A | B) & ~(A & B); }, q02: function (A, B) { return (A & ~B) | (~A & B); }, q03: function (A, B) { return (A & B) | (~A & ~B); },
       q04: function (A) { return A | ~A; }, q05: function (A, B) { return A & B; }, q06: function (A, B) { return A | B; },
-      q07: function (A, B) { return (~A | B) & (A & B); }, q08: function (A, B) { return (A | B) | (~A | ~B); },
+      q07: function (A, B) { return (A | ~B) & (A & B); }, q08: function (A, B) { return (A | B) | (~A | ~B); },
       b_and: function (A, B) { return A & B; }, b_or: function (A, B) { return A | B; }, b_not: function (A) { return ~A; }
     };
     var OR3 = {
@@ -937,13 +937,14 @@ var LogicCore = (function () {
       });
       check(tableOf(CIRC.p05) === "1011", "F10 章末問題12 1011");
       check(tableOf(CIRC.q02) === "0110" && tableOf(CIRC.q01) === "0110" && tableOf(CIRC.q07) === "0001" && tableOf(CIRC.q08) === "1111", "F11〜F14 思5 ア（q02）0110・ウ（q01）0110・イ（q07）0001・エ（q08）1111");
-      (function () {                                                                                          // イ・エの全入力行を別の式で確かめる．q07 は A＝1，B＝1 のときだけ 1（OR(NOT A,B)＝1 かつ AND＝1）
+      (function () {                                                                                          // イ・エの全入力行を別の式で確かめる．q07 は A＝1，B＝1 のときだけ 1（OR(A,NOT B)＝1 かつ AND＝1）
         var v7 = evalOf(CIRC.q07), v8 = evalOf(CIRC.q08), r, A, B;
         check(CIRC.q07.gates.map(function (g) { return g.t; }).sort().join() === "AND,AND,NOT,OR" && CIRC.q08.gates.map(function (g) { return g.t; }).sort().join() === "NOT,NOT,OR,OR,OR", "思5 イ（NOT・OR・AND・AND の 4 部品）・エ（OR×3・NOT×2 の 5 部品）の部品");
+        check(CIRC.q07.gates.some(function (g) { return g.t === "NOT" && g.in[0] === "B"; }) && !CIRC.q07.gates.some(function (g) { return g.t === "NOT" && g.in[0] === "A"; }), "q07（思5 のイ）の NOT は B に付く（原本どおり）");
         check(CIRC.q08.wires.length === 4 && CIRC.q07.wires.length === 3, "q07・q08 の途中の線の数（3・4 本．上限 4 本以内）");
         for (r = 0; r < 4; r++) {
           A = r >> 1; B = r & 1;
-          check(v7[CIRC.q07.outs[0].src][r] === ((((1 - A) | B) === 1 && (A & B) === 1) ? 1 : 0) && v7[CIRC.q07.outs[0].src][r] === (A === 1 && B === 1 ? 1 : 0), "q07 は A＝1，B＝1 のときだけ 1（行 " + r + "）");
+          check(v7[CIRC.q07.outs[0].src][r] === (((A | (1 - B)) === 1 && (A & B) === 1) ? 1 : 0) && v7[CIRC.q07.outs[0].src][r] === (A === 1 && B === 1 ? 1 : 0), "q07 は A＝1，B＝1 のときだけ 1（行 " + r + "）");
           check(v8[CIRC.q08.outs[0].src][r] === 1 && v8.g1[r] === (A | B) && v8.g2[r] === 1 - A && v8.g3[r] === 1 - B && v8.g4[r] === ((1 - A) | (1 - B)), "q08 は常に 1（行 " + r + "）．途中の線 OR(A,B)・NOT A・NOT B・OR(NOT A,NOT B)");
         }
       })();
