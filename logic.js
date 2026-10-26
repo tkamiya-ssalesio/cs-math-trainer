@@ -31,6 +31,7 @@
   }
   function rich(tag, cls, str) { return richText(el(tag, cls), str); }
   function levelSub(kind, lv) { return kind === "adder" ? T.levelSubAdder[lv] : T.levelSub[lv]; }
+  function lvLabel(kind, lv) { return kind === "adder" ? T.level[lv] + "：" + T.levelSubAdder[lv] : T.level[lv] + "（" + T.levelSub[lv] + "）"; }       // 括弧は 1 段（中級：全加算回路（挑戦））
   var LEVEL_ID = { 1: "easy", 2: "medium" };
 
   /* ---- 画面の切り替え（app.js の showScreen には触らない．.screen をまとめて切り替える） ---- */
@@ -129,7 +130,7 @@
     names.forEach(function (nm) { host.appendChild(el("div", "lg-h lg-hin", nm)); });
     for (si = 0; si < S.stages.length; si++) for (ci = 0; ci < S.stages[si].cols.length; ci++) {
       cl = S.stages[si].cols[ci]; h = el("div", "lg-h lg-htap"); h.setAttribute("data-si", String(si)); h.setAttribute("data-c", String(ci));
-      h.appendChild(el("b", "", cl.name)); h.appendChild(el("span", "lg-sub", cl.sub)); host.appendChild(h);
+      h.appendChild(el("b", "", cl.headName || cl.name)); h.appendChild(el("span", "lg-sub", cl.sub)); host.appendChild(h);
     }
     S.cells = S.stages.map(function (s2) { return s2.cols.map(function () { return []; }); });
     for (r = 0; r < R; r++) {
@@ -169,14 +170,15 @@
     if (S.p.kind === "choose") {
       st = S.stages[0]; mode = S.idx >= 1 ? "locked" : "active";
       S.optEls.forEach(function (b2, i) {
-        var o = st.options[i], on = mode === "locked" ? (S.view[0] === "rev" ? o.correct : S.finalSel[i]) : S.vals[i];
-        on = !!on; rev = mode === "locked" && S.view[0] === "rev";
-        b2.setAttribute("aria-pressed", on ? "true" : "false");
+        var o = st.options[i], chosen = !!(mode === "locked" ? S.finalSel[i] : S.vals[i]), on;
+        rev = mode === "locked" && S.view[0] === "rev";
+        on = rev ? o.correct : chosen;                                                   // 値を見せたとき：正しい回路を示す（選んでいない回路に「選択中」は付けない）
+        b2.setAttribute("aria-pressed", chosen ? "true" : "false");
         b2.className = "lg-opt" + (on ? " lg-on" : "") + (mode === "locked" ? " lg-locked" : "") + (rev ? " lg-rev" : "") + (mode === "active" && S.bad[i] ? " lg-bad" : "") + (rev && S.fixes[0] && S.fixes[0].indexOf(i) >= 0 ? " lg-fix" : "");
         b2.disabled = mode === "locked";
-        b2.querySelector(".lg-optstate").textContent = on ? U.selected : "";
+        b2.querySelector(".lg-optstate").textContent = rev ? (o.correct ? U.correctOpt : (chosen ? U.chosenOpt : "")) : (chosen ? U.selected : "");
         b2.querySelector(".lg-optout").textContent = mode === "locked" ? "出力 L：" + o.table : "";
-        b2.setAttribute("aria-label", U.pickAria + " " + o.label + "　" + (on ? U.selected : U.notSelected));
+        b2.setAttribute("aria-label", U.pickAria + " " + o.label + "　" + (chosen ? U.selected : U.notSelected) + (rev && o.correct ? "．" + U.correctOpt : ""));
       });
       return;
     }
@@ -216,7 +218,7 @@
     Array.prototype.forEach.call(k.children, function (bt) { bt.setAttribute("aria-pressed", bt.getAttribute("data-kind") === sel.kind ? "true" : "false"); });
     Array.prototype.forEach.call(b.children, function (bt) {
       var lv = parseInt(bt.getAttribute("data-lv"), 10);
-      bt.textContent = T.level[lv] + "（" + levelSub(sel.kind, lv) + "）";
+      bt.textContent = lvLabel(sel.kind, lv);
       bt.setAttribute("aria-pressed", String(lv) === String(sel.lv) ? "true" : "false");
     });
     b.hidden = !C.hasLv(sel.kind);
@@ -244,7 +246,7 @@
         done = C.tickOf(rec, kind, lv); it = el("span", "lg-tick" + (done ? " lg-done" : ""));
         if (lv) it.appendChild(document.createTextNode(T.level[lv] + " "));
         it.appendChild(el("span", "lg-mk", done ? "✓" : "—"));
-        it.setAttribute("aria-label", (lv ? T.level[lv] + "（" + levelSub(kind, lv) + "）：" : "") + (done ? U.cleared : U.notYet));
+        it.setAttribute("aria-label", (lv ? lvLabel(kind, lv) + "：" : "") + (done ? U.cleared : U.notYet));
         host.appendChild(it);
       });
     });
@@ -268,7 +270,7 @@
     var chips = $("lg-chips"), i, st, cs, li;
     $("lg-qtitle").textContent = S.p.kind === "choose" ? U.chooseTitle : U.ques[S.p.kind];
     $("lg-ask").textContent = S.p.kind === "choose" ? U.chooseTitleAbove : "";                 // 狭い幅では題を表の上に出す（CSS で切り替える）
-    $("lg-qkind").textContent = T.kind[S.p.kind] + (C.hasLv(S.p.kind) ? "　" + T.level[S.p.lv] + "（" + levelSub(S.p.kind, S.p.lv) + "）" : "");
+    $("lg-qkind").textContent = T.kind[S.p.kind] + (C.hasLv(S.p.kind) ? "　" + lvLabel(S.p.kind, S.p.lv) : "");
     $("lg-usage").textContent = S.p.kind === "choose" ? U.usageChoose : U.usage;
     renderStreak();
     if (S.idx < S.stages.length) {
@@ -423,10 +425,10 @@
   function settle(st, o) {                                                     // 段が決まった（正解・値を見せた）
     var last = S.idx === S.stages.length - 1, head = o.head, detail = o.detail, kind, sum, col, wasCleared, key = C.comboKey(sel.kind, lvOf(sel.kind));
     S.results.push(o.result); S.view[S.idx] = o.reveal ? "rev" : "ok";
-    S.fixes[S.idx] = o.reveal ? (st.type === "pick" ? o.over.concat(o.miss) : o.wrongCells) : [];
+    S.fixes[S.idx] = o.reveal ? (st.type === "pick" ? o.over : o.wrongCells) : [];
     if (st.type === "pick") S.finalSel = S.vals.slice();
     S.bad = {};
-    if (o.reveal && last) head = U.revLast;
+    if (o.reveal && last && st.type !== "pick") head = U.revLast;
     kind = o.reveal ? "retry" : "ok";
     S.idx++;
     if (!last) {
@@ -455,7 +457,7 @@
     var body = $("lg-mine-body"), kind = sel.kind, lv = lvOf(kind), c = rec.rec[C.comboKey(kind, lv)], need = C.CLEAR_STREAK, weak = C.weakestStage(c, kind);
     var tbl, thead, tr, head, tbody;
     body.innerHTML = "";
-    body.appendChild(el("p", "", T.kind[kind] + (lv ? "・" + T.level[lv] + "（" + levelSub(kind, lv) + "）" : "") + "　" + U.mineTried + " " + c.tried + " 問，" + U.mineFirst + " " + c.perfect + " 問，" + U.streak + " " + Math.min(c.streak, need) + "／" + need));
+    body.appendChild(el("p", "", T.kind[kind] + (lv ? "・" + lvLabel(kind, lv) : "") + "　" + U.mineTried + " " + c.tried + " 問，" + U.mineFirst + " " + c.perfect + " 問，" + U.streak + " " + Math.min(c.streak, need) + "／" + need));
     if (c.tried === 0) body.appendChild(el("p", "lg-note", U.mineNone));
     tbl = el("table"); thead = el("thead"); tr = el("tr");
     U.mineHead.forEach(function (h, i) { head = el("th", i ? "lg-num" : "", h); head.setAttribute("scope", "col"); tr.appendChild(head); });
@@ -556,19 +558,28 @@
     svg.style.maxWidth = "520px";
     return svg;
   }
-  function miniTable(headers, rows, hl) {                                      // hl：強調する列の番号
+  function miniTable(headers, rows, hl, hlRow) {                                      // hl：強調する列の番号
     var tbl = el("table", "lg-mini"), thead = el("thead"), tr = el("tr"), tb = el("tbody");
     headers.forEach(function (h, i) { var th = el("th", hl && hl.indexOf(i) >= 0 ? "lg-hl" : "", h); th.setAttribute("scope", "col"); tr.appendChild(th); });
     thead.appendChild(tr); tbl.appendChild(thead);
-    rows.forEach(function (row) { var r = el("tr"); row.forEach(function (x, i) { r.appendChild(el("td", hl && hl.indexOf(i) >= 0 ? "lg-hl" : "", String(x))); }); tb.appendChild(r); });
+    rows.forEach(function (row, ri) { var r = el("tr"); row.forEach(function (x, i) { r.appendChild(el("td", (hl && hl.indexOf(i) >= 0) || ri === hlRow ? "lg-hl" : "", String(x))); }); tb.appendChild(r); });
     tbl.appendChild(tb); return tbl;
   }
+  function gateFig(t) {                                                       // 解説 1 と同じ図記号（部品の中に名前）
+    var svg = sv("svg", { viewBox: "0 0 84 46", "class": "lg-svg lg-vsvg lg-gfig", role: "img", "aria-label": t + " の図記号" }), nd = drawGate(svg, t, 14, 5), two = t !== "NOT";
+    if (two) { svg.appendChild(sv("line", { x1: 4, y1: 14, x2: 14, y2: 14, "class": "lg-wire" })); svg.appendChild(sv("line", { x1: 4, y1: 32, x2: 14, y2: 32, "class": "lg-wire" })); }
+    else svg.appendChild(sv("line", { x1: 4, y1: 22, x2: 14, y2: 22, "class": "lg-wire" }));
+    svg.appendChild(sv("line", { x1: 14 + nd.w, y1: 5 + nd.h / 2, x2: 14 + nd.w + 8, y2: 5 + nd.h / 2, "class": "lg-wire" }));
+    svg.style.maxWidth = "110px";
+    return svg;
+  }
   function visTable3() {
-    var box = el("div", "lg-vtables"), v = function (id, ref) { return LogicCore.CIRC[id]; };
-    var and = ["0001"], rows = function (t) { return [0, 1, 2, 3].map(function (r) { return [r >> 1, r & 1, t.charAt(r)]; }); };
-    var w = el("div", "lg-vt"); w.appendChild(el("b", "", "AND")); w.appendChild(miniTable(["A", "B", "L"], rows("0001"), [2])); box.appendChild(w);
-    w = el("div", "lg-vt"); w.appendChild(el("b", "", "OR")); w.appendChild(miniTable(["A", "B", "L"], rows("0111"), [2])); box.appendChild(w);
-    w = el("div", "lg-vt"); w.appendChild(el("b", "", "NOT")); w.appendChild(miniTable(["A", "L"], [[0, 1], [1, 0]], [1])); box.appendChild(w);
+    var box = el("div", "lg-vtables"), rows = function (t) { return [0, 1, 2, 3].map(function (r) { return [r >> 1, r & 1, t.charAt(r)]; }); };
+    [["AND", ["A", "B", "L"], rows("0001")], ["OR", ["A", "B", "L"], rows("0111")], ["NOT", ["A", "L"], [[0, 1], [1, 0]]]].forEach(function (d) {
+      var w = el("div", "lg-vt");
+      w.appendChild(gateFig(d[0])); w.appendChild(el("b", "", { AND: "論理積回路", OR: "論理和回路", NOT: "否定回路" }[d[0]])); w.appendChild(miniTable(d[1], d[2], [d[1].length - 1]));
+      box.appendChild(w);
+    });
     return box;
   }
   function visTrace() {
@@ -583,16 +594,16 @@
     lay.nodes.filter(function (nd) { return nd.kind === "out"; }).forEach(function (nd) { fig.appendChild(sv("text", { x: nd.x + nd.w / 2, y: nd.y - 3, "class": "lg-val lg-fade", style: "animation-delay:" + (0.4 + k * 0.7) + "s", "text-anchor": "middle" }, "＝" + vals.g3)); });
     return wrap;
   }
-  function tableFromEval(cid, cols, hl) {                                       // cols：[見出し, 参照]
+  function tableFromEval(cid, cols, hl, hlRow) {                                       // cols：[見出し, 参照]
     var c = C.CIRC[cid], n = c.inputs.length, R = 1 << n, rows = [], r, i, v = LogicCoreEval(c);
     for (r = 0; r < R; r++) { rows.push(c.inputs.map(function (nm, i2) { return C.inputBit(n, i2, r); }).concat(cols.map(function (cc) { return v[cc[1]][r]; }))); }
-    return miniTable(c.inputs.concat(cols.map(function (cc) { return cc[0]; })), rows, hl);
+    return miniTable(c.inputs.concat(cols.map(function (cc) { return cc[0]; })), rows, hl, hlRow);
   }
   function LogicCoreEval(c) { return C.evalOf(c); }
   function visHalf() {
     var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad1, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad1", [["線1(C)", "g1"], ["線2", "g2"], ["線3", "g3"], ["S", "g4"]], [2, 5]));
+    box.appendChild(tableFromEval("ad1", [["線1(C)", "g1"], ["線2", "g2"], ["線3", "g3"], ["S", "g4"]], [2, 5], 3));
     return box;
   }
   function visFull() {

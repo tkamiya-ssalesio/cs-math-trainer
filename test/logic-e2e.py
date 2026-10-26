@@ -112,7 +112,7 @@ def submit(pg, route):
     else: pg.click('#lg-check')
 
 def pick_state(pg):
-    return pg.evaluate("()=>[...document.querySelectorAll('.lg-opt')].map(b=>({on:b.getAttribute('aria-pressed')==='true',bad:b.classList.contains('lg-bad'),label:b.dataset.label,dis:b.disabled}))")
+    return pg.evaluate("()=>[...document.querySelectorAll('.lg-opt')].map(b=>({on:b.classList.contains('lg-on'),sel:b.getAttribute('aria-pressed')==='true',bad:b.classList.contains('lg-bad'),label:b.dataset.label,dis:b.disabled}))")
 def choose_truth(pg):
     """③：題の表（画面から読む）と，各選択肢の回路（data-circuit）から，正解の選択肢を計算する"""
     given = pg.evaluate("()=>[...document.querySelectorAll('#lg-sheet .lg-given')].map(e=>e.textContent)")
@@ -151,10 +151,14 @@ def solve_problem(pg, mode, touch, route='button', style='half'):
             perfect = False
             wsel = wrong[:1]
             click_opts(wsel); submit(pg, route); s = st(pg); rec(s['fh'].startswith('おしい'), '③ 1回目の誤り %r' % s['fh'])
-            submit(pg, route); s = st(pg); rec(s['fh'].startswith('正しい値はこれです'), '③ 2回目も誤りで値を見せる %r' % s['fh'])
+            submit(pg, route); s = st(pg); rec(s['fh'].startswith('正しい回路は '), '③ 2回目も誤りで値を見せる %r' % s['fh'])
             outs = pg.evaluate("()=>[...document.querySelectorAll('.lg-optout')].map(e=>e.textContent)")
             rec(all(o.startswith('出力 L：') for o in outs), '③ 値を見せたとき各選択肢の出力の列が並ぶ %s' % outs)
-            ps = pick_state(pg); rec([p['on'] for p in ps] == truth, '③ 値を見せたとき正解の選択肢が選ばれて見える')
+            ps = pick_state(pg); rec([p['on'] for p in ps] == truth, '③ 値を見せたとき正解の選択肢が示される')
+            rec(all(p['sel'] == (i in wsel) for i, p in enumerate(ps)), '③ 値を見せたとき，選んでいない正解を「選択中」にしない（aria-pressed は生徒の選択のまま）')
+            states = pg.evaluate("()=>[...document.querySelectorAll('.lg-opt')].map(b=>b.querySelector('.lg-optstate').textContent)")
+            rec(all((states[i] == '正しい回路') == truth[i] for i in range(4)) and '選択中' not in states, '③ 値を見せたとき「正しい回路」の表示になる %s' % states)
+            rec(s['fh'].startswith('正しい回路は ') and 'ちがいます' not in st(pg)['fd'] and st(pg)['hint'] == '', '③ 値を見せたとき「ちがいます」・ヒントを出さない %r %r' % (s['fh'], st(pg)['hint']))
         return perfect
     c = circuit(pg); models = stage_models(c, kind)
     for si_idx, model in enumerate(models):
@@ -171,7 +175,7 @@ def solve_problem(pg, mode, touch, route='button', style='half'):
                 for r_i, v in enumerate(col):
                     if (c_i, r_i) != skip: tap_cell(pg, si, c_i, r_i, v, touch)
             submit(pg, route); s = st(pg)
-            rec(s['fh'] == 'あと 1 マス入れよう' and s['chips'][si_idx] != 'ng' and s['si'] == si, 'empty：空きがあるときは数えない %r %s' % (s['fh'], s['chips']))
+            rec(s['fh'] == 'あと 1 マス入れよう．' and s['chips'][si_idx] != 'ng' and s['si'] == si, 'empty：空きがあるときは数えない %r %s' % (s['fh'], s['chips']))
             tap_cell(pg, si, skip[0], skip[1], model[skip[0]][skip[1]], touch); submit(pg, route); s = st(pg)
             rec(s['fh'] == '正解', 'empty のあとは 1 回目で正解 %r' % s['fh'])
         elif m == 'one':
@@ -187,6 +191,7 @@ def solve_problem(pg, mode, touch, route='button', style='half'):
             submit(pg, route); s = st(pg); rec(s['fh'].startswith('おしい') and s['bad'] == len(model) * len(model[0]), 'two：1回目の誤り %r %s' % (s['fh'], s['bad']))
             submit(pg, route); s = st(pg)
             rec(s['fh'].startswith('正しい値はこれです'), 'two：2回目も誤りで値を見せる %r' % s['fh'])
+            rec('ちがいます' not in s['fd'] and s['hint'] == '', 'two：値を見せたとき「ちがいます」・ヒントを出さない %r %r' % (s['fd'], s['hint']))
         # 解決した段の値は模範（確定）
         locked = pg.evaluate("si=>[...document.querySelectorAll('.lg-cell[data-si=\"'+si+'\"]')].map(c=>[+c.dataset.c,+c.dataset.r,c.textContent,c.classList.contains('lg-locked')])", si)
         rec(all(l and t == model[c_i][r_i] for c_i, r_i, t, l in locked), '解決した段の値が模範（確定）になる（%s）' % si)

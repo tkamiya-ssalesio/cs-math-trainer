@@ -71,7 +71,7 @@ body.lg-top { align-items: flex-start; }
   .lg-panel[data-kind="choose"] .lg-work { flex-direction: row; gap: 1rem; }
 }
 
-@media (min-width: 900px) and (max-width: 1249px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 336px; width: 336px; } }
+@media (min-width: 900px) and (max-width: 1249px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 316px; width: 316px; } }
 @media (min-width: 1250px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 420px; width: 420px; } .lg-opts { grid-template-columns: repeat(2, minmax(0, 312px)) !important; } }
 
 @media (min-width: 640px) and (max-width: 899px) {
@@ -207,8 +207,9 @@ body.lg-top { align-items: flex-start; }
 .lg-learn-p { margin-bottom: 0.3rem; }
 .lg-vsvg { max-width: 520px; }
 .lg-vnote { font-weight: 700; font-size: 0.95rem; color: var(--accent-green); margin-top: 0.3rem; }
-.lg-vtables { display: flex; flex-wrap: wrap; gap: 1.2rem; }
-.lg-vt { display: grid; gap: 0.2rem; }
+.lg-vtables { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: flex-start; }
+.lg-vt { display: grid; gap: 0.2rem; justify-items: start; align-content: start; }
+.lg-vt .lg-gfig { width: 110px; }
 .lg-vt b { font-size: 0.9rem; color: var(--accent-blue); }
 .lg-vhalf { display: flex; flex-wrap: wrap; gap: 0.8rem 1.4rem; align-items: flex-start; }
 .lg-vhalf .lg-svg { width: 380px; max-width: 100% !important; }
