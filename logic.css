@@ -5,7 +5,7 @@
    （新しいクラスはすべて lg- で始める．.app-container への変更は .lg-compact（練習画面）・.lg-learn（解説）のときだけ）
    ============================================================ */
 
-.app-container.lg-compact { max-width: 1100px; width: 96%; padding: 1rem 1.25rem 1.1rem; }
+.app-container.lg-compact { max-width: 1240px; width: 96%; padding: 1rem 1.25rem 1.1rem; }
 .app-container.lg-compact > header, .app-container.lg-learn > header { margin-bottom: 0.5rem; text-align: left; display: flex; align-items: baseline; gap: 0.8rem; }
 .app-container.lg-compact > header h1, .app-container.lg-learn > header h1 { font-size: 1.15rem; letter-spacing: 0.5px; }
 .app-container.lg-compact > header .subtitle, .app-container.lg-learn > header .subtitle { display: none; }
@@ -58,6 +58,8 @@ body.lg-top { align-items: flex-start; }
 .lg-work { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
 .lg-side { min-width: 0; display: grid; align-content: start; gap: 0.4rem; }
 .lg-sidemain, .lg-sideres { min-width: 0; display: grid; align-content: start; gap: 0.35rem; }
+.lg-ask { font-size: 1.05rem; font-weight: 800; line-height: 1.45; display: none; overflow-wrap: anywhere; line-break: anywhere; }
+@media (max-width: 899px) { .lg-panel[data-kind="choose"] .lg-work { flex-wrap: wrap; } .lg-panel[data-kind="choose"] .lg-ask:not(:empty) { display: block; flex: 0 0 100%; width: 100%; } .lg-panel[data-kind="choose"] .lg-qtitle { display: none; } }
 .lg-fig { flex: none; width: 440px; max-width: 100%; }
 .lg-svg { display: block; width: 100%; height: auto; }
 .lg-sheetwrap { max-width: 100%; }
@@ -69,7 +71,8 @@ body.lg-top { align-items: flex-start; }
   .lg-panel[data-kind="choose"] .lg-work { flex-direction: row; gap: 1rem; }
 }
 
-@media (min-width: 900px) and (max-width: 1249px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 300px; width: 300px; } }
+@media (min-width: 900px) and (max-width: 1249px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 336px; width: 336px; } }
+@media (min-width: 1250px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 420px; width: 420px; } .lg-opts { grid-template-columns: repeat(2, minmax(0, 312px)) !important; } }
 
 @media (min-width: 640px) and (max-width: 899px) {
   .lg-side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 1.2rem; }
@@ -85,14 +88,14 @@ body.lg-top { align-items: flex-start; }
 .lg-shape { fill: rgba(255, 255, 255, 0.07); stroke: var(--text-primary); stroke-width: 1.5; }
 .lg-gate.lg-hot .lg-shape { stroke: var(--accent-yellow); stroke-width: 3; fill: rgba(254, 193, 7, 0.14); }
 .lg-gname { font-family: var(--font-main); font-weight: 800; font-size: 10px; fill: var(--text-primary); }
-.lg-gname.lg-small { font-size: 9px; }
+.lg-gname.lg-small { font-size: 9.5px; }
 .lg-gname.lg-tiny { font-size: 9px; font-weight: 700; }
 .lg-termbox { fill: rgba(255, 255, 255, 0.07); stroke: var(--text-primary); stroke-width: 1.2; }
 .lg-tagbox { fill: rgba(254, 193, 7, 0.16); stroke: rgba(254, 193, 7, 0.75); stroke-width: 1; }
 .lg-tagtext { font-family: var(--font-main); font-weight: 700; font-size: 9px; fill: var(--accent-yellow); }
 .lg-inname { font-family: var(--font-main); font-weight: 800; font-size: 11px; fill: var(--text-primary); }
 .lg-val { font-family: var(--font-main); font-weight: 800; font-size: 11px; fill: var(--accent-green); }
-.lg-vcap { font-family: var(--font-main); font-weight: 700; font-size: 11px; fill: var(--text-secondary); }
+.lg-vcap { font-family: var(--font-main); font-weight: 700; font-size: 10px; fill: var(--text-secondary); }
 
 /* 表（入力の列は 28px，タップする列は 44px．375px 幅でも 5 列ぶんが収まる） */
 .lg-sheet { --lg-in: 28px; --lg-cell: 44px; display: grid; gap: 0; justify-content: start; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; border-top: 1px solid var(--panel-border); border-left: 1px solid var(--panel-border); width: max-content; max-width: 100%; }

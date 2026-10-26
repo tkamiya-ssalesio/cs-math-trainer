@@ -224,7 +224,40 @@ def run_solve(b):
         # 解き終わり→次の問題で，位置が動かない・図に答えがない
         c = pg.get_attribute('#lg-fig svg', 'data-circuit') if kind != 'choose' else ''
         rec(c == '' or ('"table"' not in c and '"model"' not in c), 'data-circuit に答えがない')
+    # 1b) 375×812：答え合わせを窓の下端で押しても，誤りの結果欄（「おしい」とヒント）が窓に入る．③ は題が最初の画面に見える
+    JS_FB = "()=>{const r=document.getElementById('lg-feedback').getBoundingClientRect();return [r.top,r.bottom,innerHeight,document.getElementById('lg-feedback').innerText.length]}"
+    for kind, lv in (('combine', 1), ('combine', 2), ('adder', 2), ('choose', 2)):
+        open_kind(pg, kind, lv)
+        pg.evaluate('window.scrollTo(0,0)')
+        if kind == 'choose':
+            ask = pg.evaluate("()=>{const a=document.getElementById('lg-ask');const r=a.getBoundingClientRect();return [r.top,r.bottom,innerHeight,getComputedStyle(a).display,a.textContent,scrollY]}")
+            rec(ask[3] != 'none' and ask[0] >= 0 and ask[1] <= ask[2] and ask[5] == 0 and '全部選ぼう' in ask[4] and '下の表' in ask[4], '375×812 の ③：題（全部選ぶ）が最初の画面に見える %s' % (ask,))
+            truth, given = choose_truth(pg)
+            for i in range(4):
+                if not truth[i]: pg.tap('.lg-opt[data-i="%d"]' % i); break
+        else:
+            c = circuit(pg); models = stage_models(c, kind); si = st(pg)['si']
+            fill_taps(pg, si, models[0], True, flips=((0, 0),))
+        pg.evaluate("document.getElementById('lg-check').scrollIntoView({block:'end'})")
+        pg.tap('#lg-check'); pg.wait_for_timeout(150)
+        fb = pg.evaluate(JS_FB)
+        rec(fb[3] > 0 and fb[0] >= -0.5 and fb[1] <= fb[2] + 0.5, '375×812：答え合わせのあと誤りの結果欄が窓に入る（%s %d）上端 %d・下端 %d／窓 %d' % (kind, lv, fb[0], fb[1], fb[2]))
+    # 1366×768 のようにスクロールのない画面では，答え合わせで画面が動かない
     rec(not errs, 'タップの検査でエラー %s' % errs[:3])
+    ctx.close()
+    # ③ の題（正解の表）にダミー専用の表を選ばない（初級：0001・0111・1111．中級：常に 0／常に 1）
+    ctx = new_ctx(b, 1366, 768); pg = ctx.new_page()
+    goto_ok(pg, URL); pg.evaluate('localStorage.clear()')
+    for lv in (1, 2):
+        open_kind(pg, 'choose', lv)
+        for i in range(30):
+            truth, given = choose_truth(pg); g = ''.join(given)
+            rec(g not in (('0001', '0111', '1111') if lv == 1 else ('00000000', '11111111')), '③ の題がダミー専用の表になった（難易度 %d）%s' % (lv, g))
+            pg.click('.lg-lbtn[data-lv="%d"]' % (3 - lv)); pg.click('.lg-lbtn[data-lv="%d"]' % lv)
+    # 1366×768（スクロールなし）：答え合わせで窓の中の位置が動かない
+    open_kind(pg, 'combine', 2)
+    y0 = pg.evaluate('scrollY'); pg.click('#lg-check'); rec(pg.evaluate('scrollY') == y0 == 0, '1366×768：答え合わせでスクロールしない')
+    rec(pg.evaluate("getComputedStyle(document.getElementById('lg-ask')).display") == 'none', '1366×768：③ 以外では上の題は出ない')
     ctx.close()
     # 2) キーボード（1366×768）：半角・全角・テンキー・code だけ．Enter と答え合わせボタンの両方
     ctx = new_ctx(b, 1366, 768); pg = ctx.new_page(); errs = []

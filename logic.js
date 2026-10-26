@@ -149,7 +149,7 @@
       b.type = "button"; b.setAttribute("data-i", String(i)); b.setAttribute("data-label", o.label); b.setAttribute("aria-pressed", "false");
       head.appendChild(el("b", "lg-optlabel", o.label)); head.appendChild(el("span", "lg-optstate", ""));
       b.appendChild(head);
-      fig = drawCircuit(o.circuit, { tags: false }); fig.classList.add("lg-optsvg"); b.appendChild(fig);
+      fig = drawCircuit(o.circuit, { tags: false, scale: 1.2 }); fig.classList.add("lg-optsvg"); b.appendChild(fig);
       b.appendChild(el("span", "lg-optout", ""));
       host.appendChild(b); S.optEls.push(b);
     });
@@ -267,6 +267,7 @@
   function renderSide() {
     var chips = $("lg-chips"), i, st, cs, li;
     $("lg-qtitle").textContent = S.p.kind === "choose" ? U.chooseTitle : U.ques[S.p.kind];
+    $("lg-ask").textContent = S.p.kind === "choose" ? U.chooseTitleAbove : "";                 // 狭い幅では題を表の上に出す（CSS で切り替える）
     $("lg-qkind").textContent = T.kind[S.p.kind] + (C.hasLv(S.p.kind) ? "　" + T.level[S.p.lv] + "（" + levelSub(S.p.kind, S.p.lv) + "）" : "");
     $("lg-usage").textContent = S.p.kind === "choose" ? U.usageChoose : U.usage;
     renderStreak();
@@ -340,6 +341,13 @@
     f.appendChild(el("p", "lg-fh", head));
     if (detail) f.appendChild(el("p", "lg-fd", detail));
     if (hint) f.appendChild(el("p", "lg-fhint", hint));
+    revealFeedback();
+  }
+  function revealFeedback() {                                  // 縦にスクロールする画面（狭い幅）で，結果欄が窓の外なら窓に入れる．スクロールのない画面では動かさない
+    var r;
+    if (document.documentElement.scrollHeight <= window.innerHeight + 1) return;
+    r = $("lg-feedback").getBoundingClientRect();
+    if (r.bottom > window.innerHeight || r.top < 0) { try { $("lg-feedback").scrollIntoView({ block: "nearest" }); } catch (e) { } }
   }
 
   /* ---- 入力の受け取り ---- */
@@ -532,19 +540,19 @@
     svg.appendChild(sv("line", { x1: x, y1: y, x2: x + 18, y2: open ? y - 9 : y - 1, "class": "lg-wire" }));
   }
   function visSwitches() {
-    var svg = sv("svg", { viewBox: "0 0 360 150", "class": "lg-svg lg-vsvg", role: "img", "aria-label": "スイッチの図：AND は直列，OR は並列，NOT は反転" }), bulb = function (x, y) { svg.appendChild(sv("circle", { cx: x, cy: y, r: 9, "class": "lg-shape" })); svg.appendChild(sv("path", { d: "M" + (x - 6) + "," + (y - 6) + " L" + (x + 6) + "," + (y + 6) + " M" + (x + 6) + "," + (y - 6) + " L" + (x - 6) + "," + (y + 6), "class": "lg-wire" })); };
+    var svg = sv("svg", { viewBox: "0 0 360 132", "class": "lg-svg lg-vsvg", role: "img", "aria-label": "スイッチの図：AND は直列，OR は並列，NOT は反転" }), bulb = function (x, y) { svg.appendChild(sv("circle", { cx: x, cy: y, r: 9, "class": "lg-shape" })); svg.appendChild(sv("path", { d: "M" + (x - 6) + "," + (y - 6) + " L" + (x + 6) + "," + (y + 6) + " M" + (x + 6) + "," + (y - 6) + " L" + (x - 6) + "," + (y + 6), "class": "lg-wire" })); };
     function ln(a, b, c, d) { svg.appendChild(sv("line", { x1: a, y1: b, x2: c, y2: d, "class": "lg-wire" })); }
     function cap(x, y, s) { svg.appendChild(sv("text", { x: x, y: y, "class": "lg-vcap", "text-anchor": "middle" }, s)); }
     // AND：直列
     ln(6, 40, 20, 40); switchSym(svg, 20, 40, true); ln(40, 40, 52, 40); switchSym(svg, 52, 40, true); ln(72, 40, 90, 40); bulb(99, 40); ln(108, 40, 112, 40); ln(112, 40, 112, 70); ln(112, 70, 6, 70); ln(6, 70, 6, 40);
-    cap(60, 28, "A　　　B"); cap(58, 100, "AND＝直列"); cap(58, 116, "ともに入っているときだけ点く");
+    cap(31, 28, "A"); cap(63, 28, "B"); cap(59, 94, "AND＝直列"); cap(59, 108, "ともに入っている"); cap(59, 122, "ときだけ点く");
     // OR：並列
     ln(130, 40, 142, 40); ln(142, 25, 142, 55); ln(142, 25, 150, 25); switchSym(svg, 150, 25, true); ln(170, 25, 184, 25); ln(142, 55, 150, 55); switchSym(svg, 150, 55, true); ln(170, 55, 184, 55); ln(184, 25, 184, 55); ln(184, 40, 196, 40); bulb(205, 40); ln(214, 40, 220, 40); ln(220, 40, 220, 75); ln(220, 75, 130, 75); ln(130, 75, 130, 40);
-    cap(160, 14, "A"); cap(160, 70, "B"); cap(175, 100, "OR＝並列"); cap(175, 116, "一方が入っていれば点く");
+    cap(160, 14, "A"); cap(160, 70, "B"); cap(175, 94, "OR＝並列"); cap(175, 108, "入力の少なくとも一方が"); cap(175, 122, "入っていれば点く");
     // NOT：反転（電球と並列のスイッチ）
     ln(250, 40, 262, 40); ln(262, 40, 262, 40); ln(262, 40, 290, 40); bulb(299, 40); ln(308, 40, 336, 40); ln(336, 40, 336, 75); ln(336, 75, 250, 75); ln(250, 75, 250, 40);
     ln(290, 40, 290, 24); ln(290, 24, 300, 24); ln(308, 40, 308, 24); ln(308, 24, 300, 24);
-    cap(294, 14, "A"); cap(294, 100, "NOT＝反転"); cap(294, 116, "入ると消え，切れると点く");
+    cap(294, 14, "A"); cap(293, 94, "NOT＝反転"); cap(293, 108, "入ると消え，"); cap(293, 122, "切れると点く");
     svg.style.maxWidth = "520px";
     return svg;
   }
@@ -802,6 +810,20 @@
         L.maxFigW = Math.max(L.maxFigW || 0, Math.round(r.width)); L.maxFigH = Math.max(L.maxFigH || 0, Math.round(r.height));
         if (r.right > p.right + 1.5 || r.left < p.left - 1.5) fail(label + "：図が親からはみ出す（図 " + Math.floor(r.left) + "〜" + Math.floor(r.right) + "／親 " + Math.floor(p.left) + "〜" + Math.floor(p.right) + "）");
         if (vb.width > 380 || vb.height > 230) fail(label + "：図の viewBox が上限を超える " + vb.width + "×" + vb.height);
+        svgText(svgs[i], label);
+      }
+    }
+    function svgText(svg, label) {                        // 図の中の文字：外枠（getBBox）どうしが重ならない・図（viewBox）からはみ出さない
+      var ts = svg.querySelectorAll("text"), boxes = [], i, j, a, b, vb = svg.viewBox.baseVal, L = out.layout;
+      for (i = 0; i < ts.length; i++) { try { a = ts[i].getBBox(); } catch (e) { continue; } if (a.width > 0 && a.height > 0) boxes.push({ b: a, t: ts[i].textContent }); }
+      L.svgTexts = (L.svgTexts || 0) + boxes.length; out.checked += boxes.length;
+      for (i = 0; i < boxes.length; i++) {
+        a = boxes[i].b;
+        if (a.x < -0.5 || a.y < -0.5 || a.x + a.width > vb.width + 0.5 || a.y + a.height > vb.height + 0.5) fail(label + "：図の文字が図からはみ出す「" + boxes[i].t + "」（" + Math.floor(a.x) + "〜" + Math.ceil(a.x + a.width) + "／" + Math.floor(a.y) + "〜" + Math.ceil(a.y + a.height) + "．図 " + vb.width + "×" + vb.height + "）");
+        for (j = i + 1; j < boxes.length; j++) {
+          b = boxes[j].b;
+          if (Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) > 0.5 && Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) > 0.5) { L.svgTextOverlap = (L.svgTextOverlap || 0) + 1; fail(label + "：図の文字が重なる「" + boxes[i].t + "」と「" + boxes[j].t + "」"); }
+        }
       }
     }
     function confirmFit(label) {
@@ -1035,6 +1057,13 @@
       b = S.cells[1][0][0]; b.textContent = "1"; found = leaks().length > 0; b.textContent = "";
       b.setAttribute("title", "1"); found = found && leaks().length > 0; b.removeAttribute("title");
       out.checked += 2; if (!found || leaks().length) fail("答えの先出しの検査が働かない");
+    })();
+    (function () {                                       // 図の文字の検査自体が働くこと：重なる文字・はみ出す文字を入れた図で失敗が出る
+      var host = document.createElement("div"), s = sv("svg", { viewBox: "0 0 100 40", "class": "lg-svg" }), f0 = out.fail, got, keep = out.failures.length;
+      host.style.cssText = "position:absolute;left:0;top:0;width:200px;opacity:0"; s.appendChild(sv("text", { x: 20, y: 20, "class": "lg-vcap" }, "ともに入っているときだけ点く")); s.appendChild(sv("text", { x: 22, y: 22, "class": "lg-vcap" }, "重なる文字"));
+      host.appendChild(s); document.body.appendChild(host);
+      svgText(s, "検査の検査"); got = out.fail - f0; out.fail = f0; out.failures.length = keep; document.body.removeChild(host);
+      out.checked++; if (got < 2) fail("図の文字の検査が働かない（重なり・はみ出しを見つけられない）");
     })();
     appHits("練習・解説の描画後");
     (function () {                                       // 「記録を消す」のあとも，選んでいた種類・難易度が保たれる

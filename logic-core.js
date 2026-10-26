@@ -85,6 +85,7 @@ var LogicCore = (function () {
       common: "この問題の出力",
       ques: { basic: "AND・OR・NOT の出力を表に書こう", combine: "回路の出力を表に書こう", adder: "足し算の回路を表に書こう", choose: "同じ出力になる回路を，全部選ぼう" },
       chooseTitle: "出力 L が左の表になる回路を，全部選ぼう．1 つとは限りません．",
+      chooseTitleAbove: "出力 L が下の表になる回路を，全部選ぼう．1 つとは限りません．",
       tableOf: "真理値表", inputHead: "入力", pickAria: "回路", pickNone: "選んだ回路", selected: "選択中", notSelected: "未選択",
       halfTable: "半加算回路の表", halfTableNote: "ヒントではなく参照用．A と B を足した桁上げ C と和 S．",
       figAlt: "回路図", rowPrefix: "行目", emptyCell: "未入力",
@@ -136,6 +137,7 @@ var LogicCore = (function () {
       allFirst: "全段 1回目で正解",
       storageOff: "この端末では記録を残せません",
       endAdder: "A＝1，B＝1 のとき C＝1，S＝0．2 進数の 1＋1＝10 と同じ（桁上げ C＝上の桁，和 S＝1 桁目）．",
+      endAdder2: "A＝1，B＝1，Ci＝1 のとき Co＝1，S＝1．1＋1＋1＝11 と同じ（Co S は 2 進数で A＋B＋Ci）．",
       sameTable: "別の回路でも同じ表になることがあります．",
       chooseAll: "選んだ回路が，同じ出力になる回路のすべてと一致しました．",
       pickNone: "まだ選んでいません．回路を選んでから答え合わせ"
@@ -294,7 +296,7 @@ var LogicCore = (function () {
   CIRC.ad1m = mirrorOf(CIRC.ad1); CIRC.ad2m = mirrorOf(CIRC.ad2);
 
   /* ============ 回路図の配置（純粋関数．SPEC §5.2） ============ */
-  var T0 = 18, GAPH = 12, TRUNK_X0 = 10, TRUNK_DX = 11, TW = 6, RMARGIN = 6, LANE0 = 2.5, LANE_DY = 4;
+  var T0 = 18, GAPH = 12, TRUNK_X0 = 10, TRUNK_DX = 13, TRUNK_DX_WIDE = 17, TW = 6, RMARGIN = 6, LANE0 = 2.5, LANE_DY = 4;
   function textW(s) { var w = 0, i; for (i = 0; i < s.length; i++) w += s.charCodeAt(i) > 255 ? 9 : 5.6; return w; }
   function slotCombos(nRows, k) {
     var out = [], cur = [];
@@ -395,7 +397,8 @@ var LogicCore = (function () {
       });
       chanW[j] = Math.max((tagPad[j] || 8) + Math.max(0, tracks.length - 1) * TW + 8, 18);
     }
-    trunkRegion = TRUNK_X0 + TRUNK_DX * (n - 1) + 14;
+    var tdx = c.inputs.some(function (nm) { return nm.length > 1; }) ? TRUNK_DX_WIDE : TRUNK_DX;      // 入力名が 2 文字（Ci）のときは幹線の間隔を広げる
+    trunkRegion = TRUNK_X0 + tdx * (n - 1) + 14;
     colX[0] = trunkRegion;
     for (j = 1; j < cols; j++) colX[j] = colX[j - 1] + colW[j - 1] + chanW[j - 1];
     W = colX[cols - 1] + colW[cols - 1] + RMARGIN;
@@ -405,7 +408,7 @@ var LogicCore = (function () {
     function xOut(nd) { return nd.x + nd.w; }
     function seg(net, x1, y1, x2, y2) { if (Math.abs(x1 - x2) < 0.01 && Math.abs(y1 - y2) < 0.01) return; segs.push({ net: net, x1: Math.min(x1, x2), y1: Math.min(y1, y2), x2: Math.max(x1, x2), y2: Math.max(y1, y2), h: Math.abs(y1 - y2) < 0.01 }); }
     var trunkY = {}, trunkX = {};
-    c.inputs.forEach(function (name, k) { trunkX[name] = TRUNK_X0 + TRUNK_DX * k; trunkY[name] = null; });
+    c.inputs.forEach(function (name, k) { trunkX[name] = TRUNK_X0 + tdx * k; trunkY[name] = null; });
     function touchTrunk(name, y) { trunkY[name] = trunkY[name] === null ? y : Math.max(trunkY[name], y); }
     edges.forEach(function (e) {
       var ch = e.route, xp = e.sink.x, yp = e.yp, ys = e.ys, xo, xt, xt1, xt2, name;
@@ -559,11 +562,13 @@ var LogicCore = (function () {
   function lastOf(recent) { return recent.length ? recent[recent.length - 1] : null; }
   function shuffle(a) { var out = a.slice(), i, j, t; for (i = out.length - 1; i > 0; i--) { j = Math.floor(rng() * (i + 1)); t = out[i]; out[i] = out[j]; out[j] = t; } return out; }
   function sample(a, k) { return shuffle(a).slice(0, k); }
+  var DUMMY_ONLY = ["q04", "q05", "q06", "z01", "z02"];
+  function dummyOnlyTable(pool, t) { return pool.filter(function (c) { return tableOf(c) === t && DUMMY_ONLY.indexOf(c.id) < 0; }).length === 0; }
   function chooseSpec(lv, recent) {
     var pool = lv === 1 ? P_LIST.concat(Q_LIST) : R_LIST.concat(Z_LIST), tables = [], target, cands, withT, k, correct, others, dummies, i, tab;
     pool.forEach(function (c) { var t = tableOf(c); if (tables.indexOf(t) < 0) tables.push(t); });
-    cands = tables.filter(function (t) { return recent.indexOf("T" + lv + t) < 0; });
-    if (!cands.length) cands = tables;
+    cands = tables.filter(function (t) { return recent.indexOf("T" + lv + t) < 0 && !dummyOnlyTable(pool, t); });     // 題（正解の表）にはダミー専用の表を選ばない（ダミーとしては使う）
+    if (!cands.length) cands = tables.filter(function (t) { return !dummyOnlyTable(pool, t); });
     target = pick(cands);
     withT = pool.filter(function (c) { return tableOf(c) === target; });
     k = withT.length >= 2 ? (rng() < 0.5 ? 1 : 2) : 1;
@@ -641,8 +646,9 @@ var LogicCore = (function () {
       for (i = 0; i < perms.length; i++) if (!(perms[i][0] === 0 && perms[i][1] === 1 && perms[i][2] === 2) && eqArr(s, permRows(m, 3, perms[i]))) { id = "W-5"; break; }
     }
     if (!id) id = "W-0";
-    return { id: id, text: HINTS[id] };
+    return { id: id, text: id === "W-5" ? hint5(c) : HINTS[id] };
   }
+  function hint5(c) { return HINTS["W-5"].replace("A，B，C", c.inputs.join("，")); }       // 入力名は回路の入力名（全加算回路は A，B，Ci）
   function judgeTable(p, st, vals) {
     var empty = [], wrong = [], wrongCells = [], ok;
     st.cols.forEach(function (cl, ci) {
@@ -703,7 +709,7 @@ var LogicCore = (function () {
     if (j.ok) {
       o.head = o.st.result === "ok1" ? TEXT.msg.ok1 : TEXT.msg.ok2; o.final = true; o.result = o.st.result;
       if (st.last) {
-        if (p.kind === "adder") o.detail = TEXT.msg.endAdder;
+        if (p.kind === "adder") o.detail = p.lv === 2 ? TEXT.msg.endAdder2 : TEXT.msg.endAdder;
         else if (p.kind === "combine" && sameTableCount(p) > 1) o.detail = TEXT.msg.sameTable;
         else if (p.kind === "choose") o.detail = TEXT.msg.chooseAll;
       }
@@ -853,7 +859,7 @@ var LogicCore = (function () {
       else if (v && typeof v === "object") Object.keys(v).forEach(function (k) { walk(v[k]); });
     })(TEXT);
     out.push.apply(out, Object.keys(HINTS).map(function (x) { return HINTS[x]; }));
-    out.push(HINT_C1, HINT_C2, msgStumbled(["a", "b"]));
+    out.push(HINT_C1, HINT_C2, msgStumbled(["a", "b"]), hint5(CIRC.ad2), hint5(CIRC.r01));
     Object.keys(CIRC).forEach(function (id) { out.push(describeCircuit(CIRC[id])); });
     return out;
   }
@@ -1023,7 +1029,7 @@ var LogicCore = (function () {
       var lv, i, seenT = {}, k1 = 0, k2 = 0;
       for (lv = 1; lv <= 2; lv++) {
         var recent = [], pool = lv === 1 ? P_LIST.concat(Q_LIST) : R_LIST.concat(Z_LIST), allT = {}, got = {};
-        pool.forEach(function (c) { allT[tableOf(c)] = 1; });
+        pool.forEach(function (c) { if (DUMMY_ONLY.indexOf(c.id) < 0) allT[tableOf(c)] = 1; });          // 題になれる表（ダミー専用の表を除く）
         for (i = 0; i < nPer; i++) {
           var p = gen("choose", lv, recent), ids = p.opts, tabs = {}, k, ok = true, dummyTabs = {}, j, o, orc;
           recent.push(p.avoid); if (recent.length > AVOID) recent.shift();
@@ -1038,6 +1044,7 @@ var LogicCore = (function () {
           if (k === 1) k1++; else k2++;
           check(p.options.filter(function (op) { return op.correct; }).length === k, "③ 正解の数");
           got[p.tbl] = 1;
+          check(!!allT[p.tbl] && pool.some(function (c) { return tableOf(c) === p.tbl && DUMMY_ONLY.indexOf(c.id) < 0; }), "③ 題がダミー専用の表にならない " + p.key);
           if (i < 200) {                                       // 選択の 16 通りすべて：集合が一致のときだけ正解．C-1 の反例の行は実際に表と違う
             var st = stagesOf(p)[0], mask, vals, jr, corr = p.options.map(function (op) { return op.correct; });
             for (mask = 0; mask < 16; mask++) {
@@ -1123,6 +1130,7 @@ var LogicCore = (function () {
               if (hid === "W-2") check(T === "AND" && s === (x | y) && s !== mm, "W-2 の主張");
               if (hid === "W-3") check(T === "NOT" && s === x && mm === (~x & M), "W-3 の主張");
               if (hid === "W-6") check(T === "HA" && s !== mm, "W-6 の主張");
+              if (hid === "W-5") check(j2.diag.text.indexOf("左から " + c.inputs.join("，") + " の順に") >= 0 && j2.diag.text.indexOf("000，001，010，011，100，101，110，111") > 0, "W-5 の文は回路の入力名（" + c.inputs.join("，") + "）から作る " + c.id);
               if (hid === "W-7") check(T === "HA" && key === "S" && mm === (x ^ y) && s === (x | y), "W-7 の主張");
             }
           });
@@ -1149,7 +1157,10 @@ var LogicCore = (function () {
       o = attempt(p, w, s0, empt); check(!o.counted && o.st.attempts === 0 && o.empty.length === 1 && o.head === "あと 1 マス入れよう", "空きがあるときは試行に数えない");
       o = attempt(p, sts[1], s0, sts[1].cols.map(function (cl) { return cl.model.slice(); })); check(o.ok && o.detail === TEXT.msg.sameTable.replace("", "") || o.ok, "最後の段の解決後");
       var pa = makeProblem({ kind: "adder", lv: 1, cid: "ad1" }), sa = stagesOf(pa);
-      o = attempt(pa, sa[1], s0, sa[1].cols.map(function (cl) { return cl.model.slice(); })); check(o.ok && o.detail === TEXT.msg.endAdder, "④ の最後に「1＋1＝10」");
+      o = attempt(pa, sa[1], s0, sa[1].cols.map(function (cl) { return cl.model.slice(); })); check(o.ok && o.detail === TEXT.msg.endAdder, "④ 初級の最後に「1＋1＝10」");
+      var pb = makeProblem({ kind: "adder", lv: 2, cid: "ad2" }), sb = stagesOf(pb), vb = evalOf(CIRC.ad2);
+      o = attempt(pb, sb[1], s0, sb[1].cols.map(function (cl) { return cl.model.slice(); })); check(o.ok && o.detail === TEXT.msg.endAdder2 && o.detail.indexOf("Ci") >= 0 && vb.o1[7] === 1 && vb["h2.S"][7] === 1 && o.detail.indexOf("Co＝1，S＝1") >= 0, "④ 中級の最後は全加算回路の文（A＝1，B＝1，Ci＝1 → Co＝1，S＝1）");
+      check(o.detail.indexOf("桁上げ C＝上の桁，和 S＝1 桁目") < 0, "④ 中級の文は半加算回路の文のままでない");
       var pc = makeProblem({ kind: "combine", lv: 1, cid: "p01" }), sc = stagesOf(pc);
       o = attempt(pc, sc[1], s0, sc[1].cols.map(function (cl) { return cl.model.slice(); })); check(o.ok && o.detail === TEXT.msg.sameTable, "② 同じ表の別の回路があるとき一言");
       pc = makeProblem({ kind: "combine", lv: 1, cid: "p02" }); sc = stagesOf(pc);
