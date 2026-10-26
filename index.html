@@ -7,6 +7,7 @@
   <meta name="description" content="高校の情報の授業向けに作られた、進数変換やデータ量などの計算を練習するためのWebアプリです。">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="binary-calc.css">
+  <link rel="stylesheet" href="binary-fraction.css">
 </head>
 <body>
   <main class="app-container">
@@ -40,6 +41,11 @@
           <button class="card-btn" id="bc-open-btn" data-category="bin-calc">
             <span class="card-title" id="bc-open-title">2進数の計算（足し算・補数）</span>
             <span class="card-desc" id="bc-open-desc">2進数の足し算の筆算と，補数を使った引き算を，1段ずつ入力して練習します．時間制限はありません．</span>
+          </button>
+          <!-- 5つ目のカテゴリ：2進数の小数．画面は binary-fraction.js が受け持つ（category-select-btn ではない） -->
+          <button class="card-btn" id="bf-open-btn" data-category="bin-fraction">
+            <span class="card-title" id="bf-open-title">2進数の小数</span>
+            <span class="card-desc" id="bf-open-desc">2進数の小数と10進数の小数を，1段ずつ入力して変換します．時間制限はありません．</span>
           </button>
         </div>
       </div>
@@ -281,8 +287,100 @@
       <p class="bc-note bc-warn" id="bc-storage-note" hidden></p>
       <pre id="bc-selftest" class="bc-selftest" hidden></pre>
     </section>
+
+    <!-- =============== 9. 2進数の小数: サブメニュー =============== -->
+    <section id="bf-submenu-screen" class="screen">
+      <h2 class="section-title" id="bf-submenu-title" style="margin-bottom: 1.5rem; text-align: center; color: var(--accent-cyan); font-size: 1.5rem;">2進数の小数</h2>
+
+      <div class="menu-section">
+        <h3 class="section-title" id="bf-level-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">難易度の選択</h3>
+        <div class="bf-diffsel" id="bf-diff" role="group" aria-label="難易度"></div>
+        <p class="bf-note" id="bf-level-note"></p>
+      </div>
+
+      <div class="menu-section">
+        <h3 class="section-title" id="bf-action-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0.5px;">学習アクションの選択</h3>
+        <div class="mode-grid" style="grid-template-columns: 1fr; gap: 1rem;">
+          <button class="card-btn bf-action-btn" data-action="learn" style="border-color: rgba(79, 172, 254, 0.15);">
+            <span class="card-title" id="bf-learn-title" style="color: var(--accent-blue);">📘 解説</span>
+            <span class="card-desc" id="bf-learn-desc"></span>
+          </button>
+          <button class="card-btn bf-action-btn" data-action="d2b" style="border-color: rgba(57, 255, 20, 0.15);">
+            <span class="card-title" id="bf-kind-title-d2b" style="color: var(--accent-green);"></span>
+            <span class="card-desc" id="bf-kind-desc-d2b"></span>
+            <span class="bf-ticks" data-kind="d2b"></span>
+          </button>
+          <button class="card-btn bf-action-btn" data-action="b2d" style="border-color: rgba(255, 0, 128, 0.15);">
+            <span class="card-title" id="bf-kind-title-b2d" style="color: #ff3366;"></span>
+            <span class="card-desc" id="bf-kind-desc-b2d"></span>
+            <span class="bf-ticks" data-kind="b2d"></span>
+          </button>
+        </div>
+      </div>
+
+      <button id="bf-submenu-back-btn" class="btn-secondary" style="width: 100%; margin-top: 2rem;">カテゴリ選択に戻る</button>
+    </section>
+
+    <!-- =============== 10. 2進数の小数: 解説 =============== -->
+    <section id="bf-learn-screen" class="screen">
+      <div class="learn-header">
+        <h2 class="section-title bf-learn-screen-title" id="bf-learn-screen-title">2進数の小数の解説</h2>
+      </div>
+      <div class="learn-body bf-learn-body">
+        <div id="bf-tutorial-card" class="tutorial-card bf-tutorial"></div>
+      </div>
+      <div class="learn-footer">
+        <div class="learn-controls" style="display: flex; gap: 0.8rem; justify-content: space-between; align-items: center;">
+          <button id="bf-learn-prev" class="btn-secondary" style="flex: 1;">前へ</button>
+          <div id="bf-step-indicators" style="display: flex; gap: 0.4rem; justify-content: center; flex: 1;"></div>
+          <button id="bf-learn-next" class="btn-primary" style="flex: 1; margin-top: 0;">次へ</button>
+        </div>
+        <button id="bf-learn-close" class="btn-secondary bf-learn-close">メニューに戻る</button>
+      </div>
+    </section>
+
+    <!-- =============== 11. 2進数の小数: 練習（1段ずつ入力．時間制限なし） =============== -->
+    <section id="bf-play-screen" class="screen">
+      <div class="bf-topbar">
+        <button type="button" class="bf-linkbtn" id="bf-back-btn">← 戻る</button>
+        <div class="bf-kinds" id="bf-kinds" role="group" aria-label="向き"></div>
+        <div class="bf-lvsw" id="bf-lvsw" role="group" aria-label="難易度"></div>
+      </div>
+
+      <div class="bf-panel" id="bf-panel">
+        <section class="bf-work" aria-label="作業用紙">
+          <div class="bf-sheet" id="bf-sheet"></div>
+        </section>
+        <section class="bf-side" aria-label="手順">
+          <div class="bf-sidemain">
+            <div class="bf-qhead"><h2 class="bf-qtitle" id="bf-qtitle"></h2><div class="bf-streak" id="bf-streak"></div></div>
+            <p class="bf-qkind" id="bf-qkind"></p>
+            <p class="bf-stagehead" id="bf-stagehead"></p>
+            <p class="bf-instr" id="bf-instr"></p>
+            <ol class="bf-chips" id="bf-chips" aria-label="段の結果"></ol>
+            <div class="bf-btnrow"><button type="button" class="btn-primary bf-btn" id="bf-check"></button><span class="bf-enterhint" id="bf-enterhint"></span></div>
+          </div>
+          <div class="bf-sideres">
+            <p class="bf-cellmsg" id="bf-cellmsg" role="status" aria-live="polite"></p>
+            <div class="bf-feedback" id="bf-feedback" role="status" aria-live="polite"></div>
+            <p class="bf-extra" id="bf-extra" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+      </div>
+
+      <details id="bf-defs" class="bf-details"><summary id="bf-defs-sum"></summary><div id="bf-defs-body"></div></details>
+      <details id="bf-mine" class="bf-details bf-mine"><summary id="bf-mine-sum"></summary><div id="bf-mine-body"></div></details>
+      <div class="bf-foot"><button type="button" class="bf-linkbtn" id="bf-reset-btn">記録を消す</button></div>
+      <div class="bf-confirm" id="bf-reset-confirm" role="alertdialog" aria-labelledby="bf-reset-ask" hidden>
+        <p id="bf-reset-ask"></p>
+        <div class="bf-btnrow"><button type="button" class="btn-secondary bf-smallbtn" id="bf-reset-no"></button><button type="button" class="btn-primary bf-smallbtn" id="bf-reset-yes"></button></div>
+      </div>
+      <p class="bf-note bf-warn" id="bf-storage-note" hidden></p>
+      <pre id="bf-selftest" class="bf-selftest" hidden></pre>
+    </section>
   </main>
   <p class="bc-selftest-note" id="bc-selftest-note" role="status" hidden></p>
+  <p class="bf-selftest-note" id="bf-selftest-note" role="status" hidden></p>
 
   <!-- =============== 5. 難易度選択モーダル =============== -->
   <!-- =============== 5. トレーニング設定モーダル =============== -->
@@ -332,5 +430,8 @@
   <!-- 2進数の計算（足し算・補数）: コア（DOM に触らない）→ 画面 -->
   <script src="binary-calc-core.js"></script>
   <script src="binary-calc.js"></script>
+  <!-- 2進数の小数: コア（DOM に触らない）→ 画面 -->
+  <script src="binary-fraction-core.js"></script>
+  <script src="binary-fraction.js"></script>
 </body>
 </html>
