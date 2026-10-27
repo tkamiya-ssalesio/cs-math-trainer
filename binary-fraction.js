@@ -800,13 +800,13 @@
     }
     /* 既存の画面に影響しないこと：メニュー・サブメニューの作りと，既存カテゴリの遷移（解説・タイマー・コンボには触れない） */
     (function () {
-      var cats = document.querySelectorAll(".category-select-btn"), cards = document.querySelectorAll("#menu-screen .card-btn"), i, ids = ["menu-screen", "submenu-screen", "game-screen", "result-screen", "learn-screen", "settings-modal", "timer-bar", "combo-display", "answer-input", "submit-btn"];
+      var cats = document.querySelectorAll(".category-select-btn"), cards = document.querySelectorAll("#menu-screen .card-btn:not(#lg-open-btn)"), i, ids = ["menu-screen", "submenu-screen", "game-screen", "result-screen", "learn-screen", "settings-modal", "timer-bar", "combo-display", "answer-input", "submit-btn"];
       out.checked += 8 + ids.length;
       (function () {                                      // メニュー：カード 5 枚が窓に収まる（style.css の既存の規則は変えず，binary-fraction.css が余白を詰める）
         var doc = document.documentElement.scrollHeight, cb = document.querySelector(".app-container").getBoundingClientRect().bottom;
         out.layout.menuDoc = doc; out.layout.menuBottom = Math.floor(cb);
         if (innerWidth >= 768 && innerHeight >= 768 && (doc > innerHeight || cb > innerHeight)) fail("メニューが窓に収まらない（文書の高さ " + doc + "／枠の底 " + Math.floor(cb) + "／窓 " + innerHeight + "）");
-        if (document.querySelectorAll("#menu-screen .mode-grid > .card-btn").length !== 5) fail("メニューのカードが 5 枚でない");
+        if (document.querySelectorAll("#menu-screen .mode-grid > .card-btn").length !== 6) fail("メニューのカードが 6 枚でない");
       })();
       if (cats.length !== 3) fail("既存の 3 カテゴリのボタンが " + cats.length + " 個");
       if (cards.length !== 5) fail("メニューのカードが " + cards.length + " 枚（既存 3＋4 つ目 1＋新 1 のはず）");

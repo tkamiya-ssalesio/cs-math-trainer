@@ -1,0 +1,235 @@
+/* ============================================================
+   論理回路 — CS Math Trainer の 6 つ目のカテゴリ
+   style.css の変数（--accent-* / --panel-* / --text-* / --font-main）と部品（.card-btn / .btn-primary / .btn-secondary /
+   .tutorial-* / .step-dot / .section-title）をそのまま使う（app.js が掴むクラス・属性は使わない：.modal-diff-tab-btn・data-diff・.category-select-btn・.submenu-action-btn・.diff-btn など）．既存のクラス・規則は上書きしない
+   （新しいクラスはすべて lg- で始める．.app-container への変更は .lg-compact（練習画面）・.lg-learn（解説）のときだけ）
+   ============================================================ */
+
+.app-container.lg-compact { max-width: 1240px; width: 96%; padding: 1rem 1.25rem 1.1rem; }
+.app-container.lg-compact > header, .app-container.lg-learn > header { margin-bottom: 0.5rem; text-align: left; display: flex; align-items: baseline; gap: 0.8rem; }
+.app-container.lg-compact > header h1, .app-container.lg-learn > header h1 { font-size: 1.15rem; letter-spacing: 0.5px; }
+.app-container.lg-compact > header .subtitle, .app-container.lg-learn > header .subtitle { display: none; }
+body.lg-top { align-items: flex-start; }
+.app-container.lg-learn { max-width: 860px; width: 96%; padding: 1.1rem 1.6rem 1.2rem; }
+
+.lg-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.lg-note { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.6rem; line-height: 1.6; }
+.lg-note.lg-warn { color: var(--accent-red); font-weight: 700; }
+[hidden] { display: none !important; }
+
+/* ---- メニュー：カードが 6 枚になったので，幅 900px 以上のときだけ 2 列にする（3 行．1366×768・1024×768 に収まる）．style.css は変えない ---- */
+#menu-screen .mode-grid:has(> #lg-open-btn) { gap: 0.7rem !important; }
+#menu-screen .mode-grid:has(> #lg-open-btn) > .card-btn { padding: 0.8rem 1.2rem; gap: 0.25rem; }
+@media (min-width: 900px) {
+  .app-container:has(#menu-screen.active) { max-width: 920px; }
+  #menu-screen .mode-grid:has(> #lg-open-btn) { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ---- サブメニュー ---- */
+.lg-first { text-align: center; font-size: 0.9rem; color: var(--accent-yellow); font-weight: 700; margin-bottom: 1rem; line-height: 1.6; }
+.lg-ticks { display: flex; gap: 0.5rem; margin-top: 0.1rem; flex-wrap: wrap; }
+.lg-tick { font-size: 0.72rem; color: var(--text-secondary); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); border-radius: 999px; padding: 0.05rem 0.6rem; white-space: nowrap; }
+.lg-tick .lg-mk { font-weight: 700; }
+.lg-tick.lg-done { color: var(--accent-green); border-color: rgba(57, 255, 20, 0.45); background: rgba(57, 255, 20, 0.08); }
+.lg-diffsel { display: flex; gap: 0.6rem; }
+.lg-diff-btn { flex: 1; appearance: none; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.6rem 0; min-height: 44px; color: var(--text-primary); font-family: var(--font-main); font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: var(--transition-smooth); text-align: center; line-height: 1.3; }
+.lg-diff-btn:hover { background: rgba(255, 255, 255, 0.05); }
+.lg-diff-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+.lg-diff-btn.lg-sel[data-level="easy"] { border-color: var(--accent-green); color: var(--accent-green); box-shadow: 0 0 15px rgba(57, 255, 20, 0.15); background: rgba(57, 255, 20, 0.03); }
+.lg-diff-btn.lg-sel[data-level="medium"] { border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15); background: rgba(0, 242, 254, 0.03); }
+.lg-diffsub { font-size: 0.7rem; opacity: 0.8; }
+#lg-submenu-screen .card-btn { padding: 0.9rem 1.2rem; gap: 0.25rem; }
+
+/* ---- 練習：上の行（戻る・種類・難易度） ---- */
+.lg-topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; }
+.lg-linkbtn { appearance: none; font: inherit; font-size: 0.85rem; background: none; border: 0; color: var(--text-secondary); text-decoration: underline; cursor: pointer; padding: 0.4rem 0.5rem; min-height: 44px; min-width: 44px; }
+.lg-linkbtn:hover { color: var(--text-primary); }
+.lg-kinds { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.lg-kbtn, .lg-lbtn { appearance: none; font-family: var(--font-main); font-weight: 600; font-size: 0.88rem; color: var(--text-primary); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.4rem 0.8rem; min-height: 44px; min-width: 44px; cursor: pointer; transition: var(--transition-smooth); line-height: 1.3; }
+.lg-kbtn:hover, .lg-lbtn:hover { background: rgba(255, 255, 255, 0.07); }
+.lg-kbtn[aria-pressed="true"] { background: rgba(0, 242, 254, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: var(--shadow-neon); }
+.lg-lvsw { display: inline-flex; gap: 0.4rem; margin-left: auto; }
+.lg-lbtn[aria-pressed="true"] { background: rgba(57, 255, 20, 0.08); border-color: var(--accent-green); color: var(--accent-green); }
+.lg-kbtn:focus-visible, .lg-lbtn:focus-visible, .lg-linkbtn:focus-visible, .lg-btn:focus-visible, .lg-opt:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+.lg-usage { font-size: 0.85rem; color: var(--accent-yellow); font-weight: 700; margin: 0.1rem 0 0.1rem; line-height: 1.4; min-height: 1.2rem; }
+
+/* ---- 練習：左に回路図と表，右に手順 ---- */
+.lg-panel { margin-top: 0.3rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 0.8rem 1.1rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.6rem 1.4rem; align-items: start; }
+.lg-work { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+.lg-side { min-width: 0; display: grid; align-content: start; gap: 0.4rem; }
+.lg-sidemain, .lg-sideres { min-width: 0; display: grid; align-content: start; gap: 0.35rem; }
+.lg-ask { font-size: 1.05rem; font-weight: 800; line-height: 1.45; display: none; overflow-wrap: anywhere; line-break: anywhere; }
+@media (max-width: 899px) { .lg-panel[data-kind="choose"] .lg-work { flex-wrap: wrap; } .lg-panel[data-kind="choose"] .lg-ask:not(:empty) { display: block; flex: 0 0 100%; width: 100%; } .lg-panel[data-kind="choose"] .lg-qtitle { display: none; } }
+.lg-fig { flex: none; width: 440px; max-width: 100%; }
+.lg-svg { display: block; width: 100%; height: auto; }
+.lg-sheetwrap { max-width: 100%; }
+.lg-opts:empty { display: none; }
+@media (min-width: 900px) {
+  .lg-panel { grid-template-columns: max-content minmax(0, 1fr); }
+  .lg-panel.lg-p-wide3 .lg-work { flex-direction: row; align-items: flex-start; gap: 1rem; }
+  .lg-panel.lg-p-wide3 .lg-fig { flex: 0 0 360px; width: 360px; }
+  .lg-panel[data-kind="choose"] .lg-work { flex-direction: row; gap: 1rem; }
+}
+
+@media (min-width: 900px) and (max-width: 1249px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 316px; width: 316px; } }
+@media (min-width: 1250px) { .lg-panel.lg-p-wide3 .lg-fig { flex-basis: 420px; width: 420px; } .lg-opts { grid-template-columns: repeat(2, minmax(0, 312px)) !important; } }
+
+@media (min-width: 640px) and (max-width: 899px) {
+  .lg-side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 1.2rem; }
+  .lg-panel.lg-p-wide3 .lg-work { flex-direction: row; align-items: flex-start; gap: 1rem; }
+  .lg-panel.lg-p-wide3 .lg-fig { flex: 0 0 300px; width: 300px; }
+  .lg-panel[data-kind="choose"] .lg-work { flex-direction: row; gap: 1rem; }
+  .lg-panel[data-kind="choose"] .lg-opts { width: auto; flex: 1 1 0; min-width: 0; }
+}
+
+/* 回路図の色 */
+.lg-wire { stroke: var(--accent-cyan); stroke-width: 1.5; fill: none; }
+.lg-dot { fill: var(--accent-cyan); }
+.lg-shape { fill: rgba(255, 255, 255, 0.07); stroke: var(--text-primary); stroke-width: 1.5; }
+.lg-gate.lg-hot .lg-shape { stroke: var(--accent-yellow); stroke-width: 3; fill: rgba(254, 193, 7, 0.14); }
+.lg-gname { font-family: var(--font-main); font-weight: 800; font-size: 10px; fill: var(--text-primary); }
+.lg-gname.lg-small { font-size: 9.5px; }
+.lg-gname.lg-tiny { font-size: 9px; font-weight: 700; }
+.lg-termbox { fill: rgba(255, 255, 255, 0.07); stroke: var(--text-primary); stroke-width: 1.2; }
+.lg-tagbox { fill: rgba(254, 193, 7, 0.16); stroke: rgba(254, 193, 7, 0.75); stroke-width: 1; }
+.lg-tagtext { font-family: var(--font-main); font-weight: 700; font-size: 9px; fill: var(--accent-yellow); }
+.lg-inname { font-family: var(--font-main); font-weight: 800; font-size: 11px; fill: var(--text-primary); }
+.lg-val { font-family: var(--font-main); font-weight: 800; font-size: 11px; fill: var(--accent-green); }
+.lg-vcap { font-family: var(--font-main); font-weight: 700; font-size: 10px; fill: var(--text-secondary); }
+
+/* 表（入力の列は 28px，タップする列は 44px．375px 幅でも 5 列ぶんが収まる） */
+.lg-sheet { --lg-in: 28px; --lg-cell: 44px; display: grid; gap: 0; justify-content: start; font-family: "BIZ UDGothic", "Osaka-Mono", "MS Gothic", "Noto Sans Mono CJK JP", ui-monospace, "Menlo", "Consolas", monospace; border-top: 1px solid var(--panel-border); border-left: 1px solid var(--panel-border); width: max-content; max-width: 100%; }
+.lg-h { height: 44px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font-main); line-height: 1.15; color: var(--text-secondary); font-size: 0.8rem; border-right: 1px solid var(--panel-border); border-bottom: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.03); min-width: 0; }
+.lg-h b { font-size: 0.78rem; color: var(--accent-blue); white-space: nowrap; }
+.lg-h .lg-sub { font-size: 0.62rem; white-space: nowrap; }
+.lg-hin b, .lg-hin { color: var(--text-primary); font-weight: 800; font-size: 0.85rem; }
+.lg-hout b { color: var(--accent-yellow); }
+.lg-in { height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--text-secondary); border-right: 1px solid var(--panel-border); border-bottom: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.04); }
+.lg-given { height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 800; border-right: 1px solid var(--panel-border); border-bottom: 1px solid var(--panel-border); }
+.lg-given.lg-one { background: rgba(254, 193, 7, 0.22); }
+.lg-cell { appearance: none; box-sizing: border-box; width: 44px; height: 44px; margin: 0; padding: 0; font-family: inherit; font-weight: 800; font-size: 1.3rem; line-height: 1; text-align: center; color: var(--text-primary); background: transparent; border: 0; border-right: 1px solid var(--panel-border); border-bottom: 1px solid var(--panel-border); border-radius: 0; cursor: pointer; }
+.lg-cell.lg-one { background: rgba(0, 242, 254, 0.3); }                                 /* 1 は背景を塗る（色だけに頼らない：0 は枠のみ，字も違う） */
+.lg-cell.lg-active:hover { background: rgba(255, 255, 255, 0.08); }
+.lg-cell.lg-active.lg-one:hover { background: rgba(0, 242, 254, 0.4); }
+.lg-cell.lg-active { box-shadow: inset 0 0 0 1px rgba(0, 242, 254, 0.35); }
+.lg-cell:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: -3px; position: relative; z-index: 1; }
+.lg-cell.lg-future { opacity: 0.4; cursor: default; }
+.lg-cell:disabled { -webkit-text-fill-color: currentColor; }
+.lg-cell.lg-locked { cursor: default; background: rgba(57, 255, 20, 0.08); opacity: 1; }
+.lg-cell.lg-locked.lg-one { background: rgba(57, 255, 20, 0.3); }
+.lg-cell.lg-locked.lg-rev { background: rgba(254, 193, 7, 0.12); }
+.lg-cell.lg-locked.lg-rev.lg-one { background: rgba(254, 193, 7, 0.34); }
+.lg-cell.lg-locked.lg-fix { box-shadow: inset 0 0 0 3px var(--accent-red); }
+.lg-cell.lg-bad { background: rgba(255, 51, 102, 0.2); color: var(--accent-red); box-shadow: inset 0 0 0 3px var(--accent-red); }
+
+/* ③ の選択肢（回路図のボタン） */
+.lg-opts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; width: 100%; }
+@media (min-width: 640px) { .lg-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .lg-opts { grid-template-columns: repeat(2, minmax(0, 240px)); width: auto; } }
+.lg-opt { appearance: none; text-align: left; font-family: var(--font-main); color: var(--text-primary); background: rgba(255, 255, 255, 0.03); border: 2px solid var(--panel-border); border-radius: 12px; padding: 0.35rem 0.5rem; min-height: 44px; min-width: 44px; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; }
+.lg-opt:hover { background: rgba(255, 255, 255, 0.07); }
+.lg-opt.lg-on { border-color: var(--accent-cyan); background: rgba(0, 242, 254, 0.12); box-shadow: var(--shadow-neon); }
+.lg-opt.lg-bad { border-color: var(--accent-red); background: rgba(255, 51, 102, 0.12); }
+.lg-opt.lg-locked { cursor: default; border-color: var(--panel-border); }
+.lg-opt.lg-locked.lg-on { border-color: var(--accent-green); background: rgba(57, 255, 20, 0.1); box-shadow: none; }
+.lg-opt.lg-rev.lg-on { border-color: var(--accent-yellow); background: rgba(254, 193, 7, 0.1); }
+.lg-opt.lg-fix { border-color: var(--accent-red); }
+.lg-opthead { display: flex; align-items: center; gap: 0.5rem; min-height: 1.4rem; }
+.lg-optlabel { font-size: 1.05rem; font-weight: 800; color: var(--accent-blue); }
+.lg-optstate { font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700; }
+.lg-optsvg { max-width: 100%; }
+.lg-optout { font-size: 0.8rem; color: var(--text-secondary); min-height: 1.1rem; font-family: ui-monospace, "Menlo", "Consolas", monospace; }
+
+/* ---- 右：題・手順 ---- */
+.lg-qhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.2rem 1rem; }
+.lg-qtitle { font-size: 1.1rem; font-weight: 800; line-height: 1.45; }
+.lg-qkind { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3; margin-top: -0.2rem; }
+.lg-streak { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-secondary); }
+.lg-dot-s { width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid var(--accent-cyan); background: transparent; display: inline-block; }
+.lg-dot-s.lg-on { background: var(--accent-cyan); box-shadow: var(--shadow-neon); }
+.lg-clearmark { color: var(--accent-green); font-weight: 800; margin-left: 0.2rem; }
+.lg-stagehead { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; }
+.lg-stagehead b { color: var(--accent-cyan); }
+.lg-instr { font-size: 1rem; font-weight: 700; line-height: 1.45; min-height: 2.6rem; }
+.lg-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; list-style: none; min-height: 2.1rem; }
+.lg-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: 10px; padding: 0.1rem 0.6rem; font-size: 0.88rem; line-height: 1.5; }
+.lg-chip.lg-cur { border-color: var(--accent-cyan); background: rgba(0, 242, 254, 0.08); font-weight: 700; }
+.lg-chip .lg-mk { font-weight: 700; min-width: 1em; text-align: center; color: var(--text-secondary); }
+.lg-chip.lg-ok .lg-mk { color: var(--accent-green); }
+.lg-chip.lg-ng { border-color: var(--accent-red); }
+.lg-chip.lg-ng .lg-mk { color: var(--accent-red); }
+.lg-btnrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.lg-btn.btn-primary { display: inline-block; width: auto; margin-top: 0; padding: 0.7rem 1.8rem; font-size: 1rem; border-radius: 999px; min-height: 44px; min-width: 44px; }
+.lg-smallbtn.btn-primary, .lg-smallbtn.btn-secondary { display: inline-block; width: auto; flex: none; margin-top: 0; padding: 0.45rem 1.3rem; font-size: 0.9rem; border-radius: 999px; min-height: 44px; }
+.lg-enterhint { font-size: 0.8rem; color: var(--text-secondary); }
+.lg-cellmsg { min-height: 1.3rem; font-size: 0.85rem; color: var(--accent-red); font-weight: 700; line-height: 1.4; }
+.lg-feedback { min-height: 5.4rem; border-radius: 12px; padding: 0.5rem 0.9rem; display: grid; align-content: start; gap: 0.15rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); }
+.lg-feedback:empty { visibility: hidden; }
+.lg-feedback p, .lg-qtitle, .lg-instr, .lg-qkind { overflow-wrap: anywhere; line-break: anywhere; }
+.lg-feedback .lg-fh { font-weight: 700; font-size: 1.05rem; line-height: 1.5; }
+.lg-feedback .lg-fd, .lg-feedback .lg-fhint { font-size: 0.92rem; line-height: 1.5; }
+.lg-feedback .lg-fhint::before { content: "ヒント："; font-weight: 700; }
+.lg-feedback.lg-ok { background: rgba(57, 255, 20, 0.07); border-color: rgba(57, 255, 20, 0.4); color: var(--accent-green); }
+.lg-feedback.lg-retry { background: rgba(254, 193, 7, 0.08); border-color: rgba(254, 193, 7, 0.45); }
+.lg-feedback.lg-ng { background: rgba(255, 51, 102, 0.08); border-color: rgba(255, 51, 102, 0.5); }
+.lg-feedback.lg-ng .lg-fh { color: var(--accent-red); }
+.lg-feedback.lg-clear { background: rgba(57, 255, 20, 0.14); border-color: var(--accent-green); color: var(--accent-green); box-shadow: var(--shadow-green); }
+.lg-extra { min-height: 0.5rem; font-size: 0.9rem; font-weight: 700; color: var(--accent-green); line-height: 1.5; }
+
+/* ---- 練習：下（ことば・記録・確認） ---- */
+.lg-details { margin-top: 0.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.2rem 1rem; }
+.lg-details summary { cursor: pointer; font-weight: 600; min-height: 44px; line-height: 44px; font-size: 0.9rem; }
+.lg-details p { margin: 0.3rem 0; font-size: 0.9rem; }
+.lg-mine table, .lg-mini { border-collapse: collapse; margin: 0.4rem 0; font-size: 0.85rem; }
+.lg-mine th, .lg-mine td { border-bottom: 1px solid var(--panel-border); padding: 0.15rem 0.9rem 0.15rem 0; text-align: left; }
+.lg-mine td.lg-num, .lg-mine th.lg-num { text-align: right; font-variant-numeric: tabular-nums; }
+.lg-mini th, .lg-mini td { border: 1px solid var(--panel-border); padding: 0.1rem 0.5rem; text-align: center; font-variant-numeric: tabular-nums; min-width: 1.6rem; }
+.lg-mini th { background: rgba(255, 255, 255, 0.04); color: var(--text-secondary); font-weight: 700; }
+.lg-mini .lg-hl { background: rgba(254, 193, 7, 0.16); color: var(--accent-yellow); font-weight: 800; }
+.lg-weak { background: rgba(254, 193, 7, 0.18); color: var(--accent-yellow); border-radius: 4px; padding: 0 0.4rem; font-weight: 700; }
+.lg-below { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem; margin-top: 0.5rem; }
+.lg-below .lg-details { margin-top: 0; flex: 1 1 14rem; }
+.lg-half { margin-top: 0.2rem; }
+.lg-foot { text-align: right; flex: 0 0 auto; align-self: center; }
+.lg-confirm { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 20; width: max-content; max-width: 92vw; background: #2a1420; border: 1px solid var(--accent-red); border-radius: 12px; padding: 0.6rem 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); }
+.lg-confirm p { font-weight: 700; font-size: 0.9rem; }
+.lg-selftest-note { pointer-events: none; position: fixed; left: 0.6rem; bottom: 0.5rem; z-index: 5; margin: 0; padding: 0.15rem 0.7rem; font-size: 0.75rem; font-weight: 700; color: var(--accent-yellow); background: rgba(0, 0, 0, 0.75); border: 1px solid rgba(254, 193, 7, 0.55); border-radius: 999px; }
+.lg-selftest { background: #000; color: #8f8; border-radius: 10px; padding: 0.75rem; overflow-x: auto; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-top: 0.8rem; }
+
+/* ---- 解説 ---- */
+.lg-learn-screen-title { margin-bottom: 0.4rem; }
+.lg-learn-body { margin-bottom: 0.6rem; }
+.lg-learn-close { width: 100%; margin-top: 0.6rem; }
+.lg-tutorial { position: relative; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 20px; padding: 1rem 1.4rem; min-height: 25rem; }
+.lg-tutorial .tutorial-text { margin-bottom: 0.6rem; line-height: 1.6; }
+.lg-tutorial .tutorial-visual { min-height: 0; padding: 0.6rem 0.8rem; }
+.lg-learn-h { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.4rem; }
+.lg-learn-p { margin-bottom: 0.3rem; }
+.lg-vsvg { max-width: 520px; }
+.lg-vnote { font-weight: 700; font-size: 0.95rem; color: var(--accent-green); margin-top: 0.3rem; }
+.lg-vtables { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: flex-start; }
+.lg-vt { display: grid; gap: 0.2rem; justify-items: start; align-content: start; }
+.lg-vt .lg-gfig { width: 110px; }
+.lg-vt b { font-size: 0.9rem; color: var(--accent-blue); }
+.lg-vhalf { display: flex; flex-wrap: wrap; gap: 0.8rem 1.4rem; align-items: flex-start; }
+.lg-vhalf .lg-svg { width: 380px; max-width: 100% !important; }
+.lg-vtrace .lg-svg { width: 460px; max-width: 100% !important; }
+.lg-vhalf, .lg-vtrace { max-width: 100%; }
+.lg-vhalf .lg-mini th, .lg-vhalf .lg-mini td { padding: 0.1rem 0.35rem; min-width: 1.4rem; }
+.lg-fade { animation: lg-fadein 0.5s ease both; }
+@keyframes lg-fadein { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .lg-fade { animation: none; } }
+
+/* ---- 幅の小さい画面：縦に並べる．375px 幅でも横スクロールなし ---- */
+@media (max-width: 68rem) { .app-container.lg-compact { width: 96%; padding: 0.8rem 0.8rem 1rem; } }
+@media (max-width: 40rem) {
+  .lg-feedback { min-height: 4.6rem; }
+  .app-container.lg-compact { width: 100%; padding: 0.5rem 0.4rem 0.8rem; border-radius: 12px; }
+  .app-container.lg-compact > header h1 { font-size: 1rem; }
+  .lg-panel { padding: 0.5rem 0.4rem; border-radius: 14px; }
+  .lg-details { padding: 0.1rem 0.7rem; }
+  .app-container.lg-learn { width: 100%; padding: 0.8rem 0.6rem 1rem; }
+  .lg-tutorial { padding: 0.8rem 0.7rem; }
+  .lg-lvsw { margin-left: 0; }
+  .lg-kbtn, .lg-lbtn { padding: 0.35rem 0.6rem; font-size: 0.82rem; }
+}
