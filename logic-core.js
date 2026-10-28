@@ -94,7 +94,7 @@ var LogicCore = (function () {
       instrWires: "図の線 1 本ずつの値を，列ごとに書こう（左の列から）．",
       instrOut: "線の値を使って，出力の列を書こう．",
       instrOutAdder: "桁上げ Co と和 S の列を書こう．",
-      instrOutAdder1: "和 S の列を書こう（桁上げ C は線1）．",
+      instrOutAdder1: "和 S の列を書こう（桁上げ C は P）．",
       instrPick: "選び終えたら「答え合わせ」．",
       focusNote: "いま求める線の部品は太く描いてあります．"
     },
@@ -116,8 +116,8 @@ var LogicCore = (function () {
                  "OR は，<b>両方が 1 のときも 1</b>．AND は，ともに 1 のときだけ 1．NOT は 0 と 1 が入れ替わる．"],
           visual: { type: "table3" } },
         { title: "途中の線をたどる",
-          text: ["部品が 2 つ以上あるときは，途中の線に名前（線1，線2）を付けて，1 つずつたどる．",
-                 "<b>A＝1，B＝0</b> のとき：線1 ＝ 0，線2 ＝ 1，L ＝ 1．この 1 行が，表の 1 行になる．"],
+          text: ["部品が 2 つ以上あるときは，途中の線に名前（P，Q）を付けて，1 つずつたどる．",
+                 "<b>A＝1，B＝0</b> のとき：P ＝ 0，Q ＝ 1，L ＝ 1．この 1 行が，表の 1 行になる．"],
           visual: { type: "trace" } },
         { title: "半加算回路と足し算",
           text: ["半加算回路：1 桁どうしの足し算をする回路．<b>C＝桁上げ（上の桁），S＝和（1 桁目）</b>．",
@@ -170,6 +170,20 @@ var LogicCore = (function () {
   function bitsOf(arr) { return arr.join(""); }
   function isIn(c, ref) { return c.inputs.indexOf(ref) >= 0; }
 
+  /* ---- 紙（第12回ワークシート）と同じ問題：線の名前・部品の上下を紙にそろえる（SPEC §5.4）----
+     names：部品の id → 出力の線の名前．above：[上, 下] の組（同じ列で上に描く）．colMin：部品の列の下限（紙の図の列にそろえる）．
+     紙にない問題は，左の列から順に，同じ列では図の上から P・Q・R・T（S は和と重なるので飛ばす）．          */
+  var WIRE_SEQ = ["P", "Q", "R", "T", "U", "V", "W"];
+  var PAPER = {
+    p02: { paper: "［3］例（NOT A と B の AND）", names: { g1: "P" } },
+    p01: { paper: "［3］練習1（A AND B を NOT に通す）", names: { g1: "P" } },
+    p05: { paper: "［3］練習2（章末問題12）", names: { g1: "P", g2: "Q" }, above: [["g1", "g2"]] },
+    q01: { paper: "［3］ア（（A OR B）AND NOT（A AND B））", names: { g2: "P", g1: "Q", g3: "R" }, above: [["g2", "g1"]] },
+    q07: { paper: "［3］イ（（A OR NOT B）AND（A AND B））", names: { g3: "P", g2: "Q", g1: "R" }, colMin: { g3: 1 }, above: [["g2", "g3"]], notInOrder: true },
+    ad1: { paper: "［4］半加算回路（例題7）", names: { g1: "P", g2: "Q", g3: "R" }, above: [["g1", "g2"]] }
+  };
+  function paperOf(c) { return PAPER[c.base || c.id] || null; }
+
   // 式の文字列（AND(A,NOT(B)) の形．画面には出さない内部の記法）を回路に直す
   function parseExpr(id, str, inputs) {
     var pos = 0, gates = [], toks = str.replace(/\s+/g, "").match(/[A-Za-z]+|[(),]/g), t = 0;
@@ -190,22 +204,37 @@ var LogicCore = (function () {
   function refOf(g, key) { return g.t === "HA" ? g.id + "." + key : g.id; }
   function colOfRef(c, ref) { var i, g; if (isIn(c, ref)) return -1; for (i = 0; i < c.gates.length; i++) { g = c.gates[i]; if (g.id === ref || ref.indexOf(g.id + ".") === 0) return g.col; } throw new Error("参照が見つからない " + ref); }
   function finishCircuit(c) {
-    var i, cols = 0, order, k = 1;
-    c.gates.forEach(function (g) { g.col = 1 + Math.max.apply(null, g.in.map(function (r) { return colOfRef(c, r); })); cols = Math.max(cols, g.col); });
+    var i, cols = 0, order, k = 1, pp = paperOf(c), w0 = [];
+    c.gates.forEach(function (g) { g.col = Math.max((pp && pp.colMin && pp.colMin[g.id]) || 0, 1 + Math.max.apply(null, g.in.map(function (r) { return colOfRef(c, r); }))); cols = Math.max(cols, g.col); });
     c.maxCol = cols;
     order = c.gates.map(function (g, i2) { return { g: g, i: i2 }; }).sort(function (a, b) { return a.g.col - b.g.col || a.i - b.i; });
-    c.wires = []; c.wireName = {};
+    // 途中の線の名前は図の上下の位置で決まる（配置を計算してから．namesOf）．配置の計算中は仮の名前 pname を使う
     order.forEach(function (o) {
       outKeys(o.g).forEach(function (key) {
-        var ref = refOf(o.g, key), fin = c.outs.some(function (x) { return x.src === ref && x.stage !== false; }), name;
+        var ref = refOf(o.g, key), fin = c.outs.some(function (x) { return x.src === ref && x.stage !== false; }), w;
         if (fin) return;
-        name = "線" + k++;
-        c.wires.push({ ref: ref, name: name, gate: o.g, key: key });
-        c.wireName[ref] = name;
+        w = { ref: ref, pname: "P", gate: o.g, key: key };
+        Object.defineProperty(w, "name", { enumerable: true, get: function () { return namesOf(c).map[ref]; } });
+        w0.push(w);
       });
     });
+    c._w0 = w0; c._names = null;
+    Object.defineProperty(c, "wires", { enumerable: true, configurable: true, get: function () { return namesOf(c).list; } });
+    Object.defineProperty(c, "wireName", { enumerable: true, configurable: true, get: function () { return namesOf(c).map; } });
     c.finals = c.outs.filter(function (x) { return x.stage !== false; });
     return c;
+  }
+  function namesOf(c) { if (!c._names) layoutCircuit(c, true); return c._names; }
+  // 配置 lay（札つき）から，途中の線の名前を決める：紙と同じ問題は PAPER の名前，そのほかは（列，出力の足の高さ）の順に P・Q・R・T
+  function computeNames(c, lay) {
+    var pp = paperOf(c), keyed, map = {}, list;
+    keyed = c._w0.map(function (w) {
+      var nd = lay.nodes.filter(function (x) { return x.id === w.gate.id; })[0];
+      return { w: w, col: w.gate.col, y: nd.y + outPinY(nd.t, w.key) };
+    }).sort(function (a, b) { return a.col - b.col || a.y - b.y; });
+    keyed.forEach(function (x, i) { map[x.w.ref] = pp ? pp.names[x.w.ref] : WIRE_SEQ[i]; });
+    list = c._w0.slice().sort(function (a, b) { return WIRE_SEQ.indexOf(map[a.ref]) - WIRE_SEQ.indexOf(map[b.ref]); });
+    return { map: map, list: list };
   }
   function rowsOf(c) { return 1 << c.inputs.length; }
   function inputBit(n, i, r) { return (r >> (n - 1 - i)) & 1; }
@@ -295,8 +324,8 @@ var LogicCore = (function () {
   CIRC.ad1 = adderCircuit(1); CIRC.ad2 = adderCircuit(2); EXPECT.ad1 = "0110"; EXPECT.ad2 = "01101001";
   // 鏡（A と B の線のつなぎ替え）．④ は鏡 2 通り：mirror = true で A と B を入れ替えた形
   function mirrorOf(c) {
-    var m = JSON.parse(JSON.stringify(c)), sw = { A: "B", B: "A" };
-    m.id = c.id + "m";
+    var m = JSON.parse(JSON.stringify({ id: c.id, expr: c.expr, inputs: c.inputs, gates: c.gates.map(function (g) { return { id: g.id, t: g.t, in: g.in }; }), outs: c.outs })), sw = { A: "B", B: "A" };
+    m.base = c.base || c.id; m.id = c.id + "m";
     m.gates.forEach(function (g) { g.in = g.in.map(function (r) { return sw[r] || r; }); });
     return finishCircuit(m);
   }
@@ -389,8 +418,8 @@ var LogicCore = (function () {
     // 列の幅，タグの幅（途中の線の名前の札）
     for (j = 0; j < cols; j++) { colW[j] = 0; tagPad[j] = 0; }
     L.byCol.forEach(function (list, ci) { list.forEach(function (nd) { colW[ci] = Math.max(colW[ci], nd.w); }); });
-    if (tags) c.wires.forEach(function (w) {
-      var g = w.gate, nm = w.name + (c.outs.some(function (x) { return x.src === w.ref && x.stage === false; }) ? "＝" + c.outs.filter(function (x) { return x.src === w.ref; })[0].name : "");
+    if (tags) c._w0.forEach(function (w) {
+      var g = w.gate, nm = w.pname + (c.outs.some(function (x) { return x.src === w.ref && x.stage === false; }) ? "＝" + c.outs.filter(function (x) { return x.src === w.ref; })[0].name : "");
       w.tagText = nm; w.tagW = Math.ceil(textW(nm)) + 4;
       tagPad[g.col] = Math.max(tagPad[g.col], w.tagW + 7);
     });
@@ -432,9 +461,9 @@ var LogicCore = (function () {
     });
     c.inputs.forEach(function (name) { if (trunkY[name] !== null) seg("in:" + name, trunkX[name], 16, trunkX[name], trunkY[name]); });
     // 札（途中の線の名前）：部品の出力の線の上
-    if (tags) c.wires.forEach(function (w) {
+    if (tags) c._w0.forEach(function (w) {
       var nd = L.nodes.filter(function (x) { return x.id === w.gate.id; })[0], yo = nd.y + outPinY(nd.t, w.key);
-      tagList.push({ net: w.ref, text: w.tagText, name: w.name, x: nd.x + nd.w + 3, y: yo - 15, w: w.tagW, h: 12 });
+      tagList.push({ net: w.ref, text: w.tagText, name: w.pname, x: nd.x + nd.w + 3, y: yo - 15, w: w.tagW, h: 12 });
     });
     // 分岐の丸
     var dots = dotsOf(segs);
@@ -506,8 +535,16 @@ var LogicCore = (function () {
     var key = c.id + (tags ? "#t" : ""), nodes, byCol, rowsN, maxH, placements, best = null, bestCost = Infinity, pi, tries;
     if (layoutCache[key]) return layoutCache[key];
     nodes = makeNodes(c); byCol = []; nodes.forEach(function (nd) { (byCol[nd.col] = byCol[nd.col] || []).push(nd); });
+    if (paperOf(c) && paperOf(c).above) paperOf(c).above.forEach(function (pr) {      // 紙の上下：同じ列の中で，上に描く部品を先に並べる（slotCombos は列の中の並びを変えない）
+      byCol.forEach(function (l) { var ia = -1, ib = -1, t; l.forEach(function (nd, i) { if (nd.id === pr[0]) ia = i; if (nd.id === pr[1]) ib = i; }); if (ia >= 0 && ib >= 0 && ia > ib) { t = l[ia]; l[ia] = l[ib]; l[ib] = t; } });
+    });
     rowsN = Math.max.apply(null, byCol.map(function (l) { return l.length; })); maxH = Math.max.apply(null, nodes.map(function (nd) { return nd.h; }));
     placements = product(byCol.map(function (l) { return slotCombos(rowsN, l.length); }));
+    if (paperOf(c) && paperOf(c).above) placements = placements.filter(function (slots) {      // 紙の上下：[上, 下] の組は上の部品が小さい段
+      var at = {};
+      byCol.forEach(function (l, ci) { l.forEach(function (nd, i) { at[nd.id] = slots[ci][i]; }); });
+      return paperOf(c).above.every(function (pr) { return at[pr[0]] < at[pr[1]]; });
+    });
     placements.forEach(function (slots) {
       var L = layoutOnce(c, tags, nodes, byCol, slots, rowsN, maxH), cands = L.edges.map(function (e) { return candidates(L, e); }), idx, flips, f, ei, choice, lay, v, goods = 0, order = [], k2;
       if (cands.some(function (cl) { return cl.length === 0; })) return;
@@ -525,6 +562,10 @@ var LogicCore = (function () {
     if (!best) throw new Error("配置が見つからない " + key);
     best.cost = bestCost;
     layoutCache[key] = best;
+    if (tags) {                                             // 札の名前は図の上下の位置で決まる：配置が決まったら名前をつけ，札に写す
+      c._names = computeNames(c, best);
+      best.tags.forEach(function (t) { var w = c._w0.filter(function (x) { return x.ref === t.net; })[0], alias = c.outs.filter(function (x) { return x.src === t.net && x.stage === false; })[0]; t.name = c._names.map[t.net]; t.text = t.name + (alias ? "＝" + alias.name : ""); });
+    }
     return best;
   }
 
@@ -547,7 +588,7 @@ var LogicCore = (function () {
     c.gates.forEach(function (g) { if (g.t === "HA") hIdx[g.id] = CIRCLED[k++]; });
     return refs.map(function (w) {
       var g = c.gates.filter(function (x) { return x.id === w.ref || w.ref.indexOf(x.id + ".") === 0; })[0], key = w.ref.indexOf(".") > 0 ? w.ref.split(".")[1] : "o";
-      var alias = c.outs.filter(function (o) { return o.src === w.ref && o.stage === false; })[0];       // 図の「線1＝C」と同じ言い方（初級の④だけ）
+      var alias = c.outs.filter(function (o) { return o.src === w.ref && o.stage === false; })[0];       // 図の札と同じ「P＝C」の言い方（初級の④だけ）
       return { key: w.ref, ref: w.ref, name: w.name, headName: alias ? w.name + "＝" + alias.name : w.name, sub: g.t === "HA" ? hIdx[g.id] + key : g.t, gate: g, gateId: g.id, outKey: key, model: strBits(v[w.ref]) };
     });
   }
@@ -953,7 +994,7 @@ var LogicCore = (function () {
       check(tableOf(CIRC.r01) === "01010111" && tableOf(CIRC.r02) === "11010001", "F19・F20 #05・#06");
       (function () {                                                                                          // F21 全加算回路 8 行（§2.4 の表）
         var v = evalOf(CIRC.ad2), W = { l1: "00111100", l2: "00000011", l3: "00010100", S: "01101001", Co: "00010111" }, r, A, B, Ci;
-        check(bitsOf(v["h1.S"]) === W.l1 && bitsOf(v["h1.C"]) === W.l2 && bitsOf(v["h2.C"]) === W.l3 && bitsOf(v["h2.S"]) === W.S && bitsOf(v.o1) === W.Co, "F21 全加算回路の表（線1〜線3，S，Co）");
+        check(bitsOf(v["h1.S"]) === W.l1 && bitsOf(v["h1.C"]) === W.l2 && bitsOf(v["h2.C"]) === W.l3 && bitsOf(v["h2.S"]) === W.S && bitsOf(v.o1) === W.Co, "F21 全加算回路の表（P〜R，S，Co）");
         for (r = 0; r < 8; r++) { A = r >> 2; B = (r >> 1) & 1; Ci = r & 1; check(2 * v.o1[r] + v["h2.S"][r] === A + B + Ci, "F21 Co S の 2 進数＝A＋B＋Ci（行 " + r + "）"); }
       })();
       (function () {                                                                                          // F22 4 ビット加算：全加算回路を 4 段つなぐ評価
@@ -1024,6 +1065,62 @@ var LogicCore = (function () {
         });
       });
       rep.extra.geom = { layouts: n, maxW: maxW, maxWAdder: maxWAd, maxH: maxH };
+    })();
+
+    /* ---- 3b. 途中の線の名前（SPEC §5.4）：図の上下の位置の順・紙との照合 ---- */
+    (function () {
+      var ins = {}, outs = {}, nb = 0, paperN = 0;
+      function posOrder(c, lay) {                                                      // 札のある線を（列，出力の足の高さ）の順に並べた参照
+        return c._w0.map(function (w) { var nd = lay.nodes.filter(function (x) { return x.id === w.gate.id; })[0]; return { ref: w.ref, col: w.gate.col, y: nd.y + outPinY(nd.t, w.key) }; })
+          .sort(function (a, b) { return a.col - b.col || a.y - b.y; }).map(function (x) { return x.ref; });
+      }
+      Object.keys(CIRC).forEach(function (id) {
+        var c = CIRC[id], lay = layoutCircuit(c, true), names = c.wires.map(function (w) { return w.name; }), pp = paperOf(c), pos = posOrder(c, lay), seen = {}, reserved;
+        reserved = c.inputs.concat(c.outs.map(function (o) { return o.name; })).concat(["S"]);
+        nb++;
+        check(names.every(function (nm, i) { return !seen[nm] && (seen[nm] = 1); }), "線の名前が重ならない " + id + " " + names.join());
+        check(names.every(function (nm) { return reserved.indexOf(nm) < 0; }), "線の名前は S・入力名・出力名と重ならない " + id + " " + names.join());
+        check(names.join() === WIRE_SEQ.slice(0, names.length).join(), "名前は P・Q・R・T の順に隙間なく " + id + " " + names.join());
+        check(c.wires.length === c.gates.reduce(function (n, g) { return n + outKeys(g).length; }, 0) - c.finals.length, "線の数＝部品の出力の数−出力の列 " + id);
+        check(c.wires.every(function (w) { return c.wireName[w.ref] === w.name; }), "wireName と wires の名前が一致 " + id);
+        if (!pp || !pp.notInOrder) check(pos.map(function (r) { return c.wireName[r]; }).join() === names.join(), "名前の順＝列→上下の位置の順 " + id + " " + pos.map(function (r) { return c.wireName[r]; }).join());
+        check(lay.tags.every(function (t) { var alias = c.outs.filter(function (x) { return x.src === t.net && x.stage === false; })[0]; return t.name === c.wireName[t.net] && t.text === t.name + (alias ? "＝" + alias.name : ""); }), "図の札の文字が線の名前と一致 " + id);
+        if (id.indexOf("b_") !== 0 && id.charAt(0) !== "q" && id.charAt(0) !== "z") check(stagesOf(makeProblem({ kind: id.indexOf("ad") === 0 ? "adder" : "combine", lv: c.inputs.length === 2 ? 1 : 2, cid: id }))[0].cols.map(function (x) { return x.name; }).join() === names.join(), "表の列の並び＝名前の順 " + id);
+        if (pp && !c.base) paperN++;
+      });
+      // 紙の 6 問（第12回ワークシート［3］［4］．値は 第12回_ワークシート.tex の \tc から）：線の名前・値・図の上下／左右
+      var PAPER6 = [
+        { id: "p02", paper: "［3］例", w: [["P", "NOT", "1100"]], L: "0100" },
+        { id: "p01", paper: "［3］練習1", w: [["P", "AND", "0001"]], L: "1110" },
+        { id: "p05", paper: "［3］練習2（章末問題12）", w: [["P", "AND", "0001"], ["Q", "NOT", "1010"]], L: "1011", above: [["P", "Q"]], sameCol: [["P", "Q"]] },
+        { id: "q01", paper: "［3］ア", w: [["P", "AND", "0001"], ["Q", "OR", "0111"], ["R", "NOT", "1110"]], L: "0110", above: [["P", "Q"]], sameCol: [["P", "Q"]], left: [["P", "R"]] },
+        { id: "q07", paper: "［3］イ", w: [["P", "AND", "0001"], ["Q", "OR", "1011"], ["R", "NOT", "1010"]], L: "0001", above: [["Q", "P"]], sameCol: [["P", "Q"]], left: [["R", "P"]] },
+        { id: "ad1", paper: "［4］半加算回路", w: [["P", "AND", "0001"], ["Q", "OR", "0111"], ["R", "NOT", "1110"]], L: "0110", C: "0001", above: [["P", "Q"]], sameCol: [["P", "Q"]], left: [["P", "R"]], alias: "P" }
+      ];
+      PAPER6.forEach(function (d) {
+        [d.id].concat(d.id === "ad1" ? ["ad1m"] : []).forEach(function (cid) {
+          var c = CIRC[cid], lay = layoutCircuit(c, true), v = evalOf(c), nodeOf = {};
+          function wr(nm) { return c.wires.filter(function (w) { return w.name === nm; })[0]; }
+          function ndOf(nm) { var w = wr(nm); return lay.nodes.filter(function (x) { return x.id === w.gate.id; })[0]; }
+          check(c.wires.length === d.w.length, "紙 " + d.paper + "：線の数 " + cid);
+          d.w.forEach(function (x) {
+            var w = wr(x[0]);
+            check(!!w && w.gate.t === x[1] && bitsOf(v[w.ref]) === x[2], "紙 " + d.paper + "：" + x[0] + "＝" + x[1] + " の出力 " + x[2] + " " + cid);
+          });
+          check(bitsOf(v[c.outs.filter(function (o) { return o.name === "L" || o.name === "S"; })[0].src]) === d.L, "紙 " + d.paper + "：出力 " + d.L + " " + cid);
+          if (d.C) check(bitsOf(v[c.outs.filter(function (o) { return o.name === "C"; })[0].src]) === d.C && c.wireName[c.outs.filter(function (o) { return o.name === "C"; })[0].src] === d.alias, "紙 " + d.paper + "：C＝" + d.C + "（P の線）" + cid);
+          (d.above || []).forEach(function (pr) { check(ndOf(pr[0]).y < ndOf(pr[1]).y, "紙 " + d.paper + "：" + pr[0] + " が " + pr[1] + " の上 " + cid); });
+          (d.sameCol || []).forEach(function (pr) { check(ndOf(pr[0]).col === ndOf(pr[1]).col, "紙 " + d.paper + "：" + pr[0] + " と " + pr[1] + " は同じ列 " + cid); });
+          (d.left || []).forEach(function (pr) { check(ndOf(pr[0]).col < ndOf(pr[1]).col, "紙 " + d.paper + "：" + pr[0] + " が " + pr[1] + " の左 " + cid); });
+        });
+      });
+      // 紙の対応表（SPEC §5.4）の問題番号：思5 のウ＝q01（紙のア），思5 のイ＝q07（紙のイ），章末問題12＝p05，例題7＝ad1
+      check(CIRC.q01.expr === "AND(OR(A,B),NOT(AND(A,B)))" && CIRC.q07.expr === "AND(OR(A,NOT(B)),AND(A,B))" && CIRC.p05.expr === "OR(AND(A,B),NOT(B))" && CIRC.p02.expr === "AND(NOT(A),B)" && CIRC.p01.expr === "NOT(AND(A,B))", "紙の 6 問に当たるテンプレートの式");
+      check(paperN === 6 && Object.keys(PAPER).length === 6, "紙の問題の登録は 6 つ");
+      // 解説・文に旧名「線1」が残っていない
+      check(!/線[0-9１-９]/.test(JSON.stringify(TEXT)) && !/線[0-9１-９]/.test(JSON.stringify(HINTS)), "画面の文に「線1」「線2」が残っていない");
+      Object.keys(sources || {}).forEach(function (f) { check(!/線[0-9１-９]/.test(sources[f].replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "")) || f === "logic-core.js", "ソースの文字列に「線1」が残っていない " + f); });
+      rep.extra.wireNames = { circuits: nb, paper: paperN };
     })();
 
     /* ---- 4. 同じ表の組の列挙・形の重複 ---- */
@@ -1194,7 +1291,7 @@ var LogicCore = (function () {
       o = attempt(p, w, s0, vals); check(o.ok && o.result === "ok1" && o.final && o.counted, "1回目で正解 ok1");
       o = attempt(p, w, advance(s0, false), vals); check(o.ok && o.result === "ok2", "2回目で正解 ok2");
       wrongVals = vals.map(function (cl) { return cl.slice(); }); wrongVals[0][0] = wrongVals[0][0] === "0" ? "1" : "0";
-      o = attempt(p, w, s0, wrongVals); check(!o.ok && !o.final && o.st.attempts === 1 && o.hint && o.detail.indexOf("線1の 1 行目（A＝0，B＝0）がちがいます") === 0 && o.wrongCells.length === 1, "1回目の誤り：ヒントを 1 つ " + o.detail);
+      o = attempt(p, w, s0, wrongVals); check(!o.ok && !o.final && o.st.attempts === 1 && o.hint && o.detail.indexOf("Pの 1 行目（A＝0，B＝0）がちがいます") === 0 && o.wrongCells.length === 1, "1回目の誤り：ヒントを 1 つ " + o.detail);
       o = attempt(p, w, o.st, wrongVals); check(!o.ok && o.final && o.reveal && o.result === "rev", "2回目も誤り：値を見せる rev");
       empt = vals.map(function (cl) { return cl.slice(); }); empt[1][2] = "";
       o = attempt(p, w, s0, empt); check(!o.counted && o.st.attempts === 0 && o.empty.length === 1 && o.head === "あと 1 マス入れよう．", "空きがあるときは試行に数えない");
@@ -1225,9 +1322,9 @@ var LogicCore = (function () {
         var allW0 = true; Object.keys(CIRC).forEach(function (id) { if (id.charAt(0) === "q" || id.charAt(0) === "z") return; var cc = CIRC[id], pr = makeProblem({ kind: id.indexOf("ad") === 0 ? "adder" : id.indexOf("b_") === 0 ? "basic" : "combine", lv: cc.inputs.length === 2 ? 1 : 2, cid: id }); stagesOf(pr).forEach(function (stt) { stt.cols.forEach(function (cl, ci) { var vs = stt.cols.map(function (c2) { return c2.model.slice(); }), k; for (k = 0; k < (1 << cl.model.length); k++) { vs[ci] = cl.model.map(function (_, r) { return String((k >> (cl.model.length - 1 - r)) & 1); }); var d = judgeStage(pr, stt, vs).diag; if (d && d.id === "W-0" && d.text !== hint0(cl.gate)) allW0 = false; } }); }); });
         check(allW0, "全数：W-0 の文はその部品の種類（AND・OR・NOT・半加算回路）入り");
         check(TEXT.ui.kindDesc.combine.indexOf("初級が " + GATE_RANGE[1] + " 個，中級が " + GATE_RANGE[2] + " 個") >= 0 && GATE_RANGE[1] === "2〜3" && GATE_RANGE[2] === "2〜5", "組み合わせのカードの部品数は，テンプレートから数えた値（初級 " + GATE_RANGE[1] + "・中級 " + GATE_RANGE[2] + "）");
-        check(TEXT.ui.instrOutAdder1 === "和 S の列を書こう（桁上げ C は線1）．" && stagesOf(makeProblem({ kind: "adder", lv: 1, cid: "ad1" }))[1].instr === TEXT.ui.instrOutAdder1 && stagesOf(makeProblem({ kind: "adder", lv: 2, cid: "ad2" }))[1].instr === TEXT.ui.instrOutAdder, "④ 初級の段 2 の指示は S だけ");
-        var hc = stagesOf(makeProblem({ kind: "adder", lv: 1, cid: "ad1" }))[0].cols; check(hc[0].headName === "線1＝C" && hc[1].headName === "線2" && hc[0].name === "線1", "④ 初級の表の線1 の見出しに C を添える");
-        hc = stagesOf(makeProblem({ kind: "adder", lv: 2, cid: "ad2" }))[0].cols; check(hc.every(function (x) { return x.headName === x.name; }), "④ 中級の見出しは線1〜線3 のまま");
+        check(TEXT.ui.instrOutAdder1 === "和 S の列を書こう（桁上げ C は P）．" && stagesOf(makeProblem({ kind: "adder", lv: 1, cid: "ad1" }))[1].instr === TEXT.ui.instrOutAdder1 && stagesOf(makeProblem({ kind: "adder", lv: 2, cid: "ad2" }))[1].instr === TEXT.ui.instrOutAdder, "④ 初級の段 2 の指示は S だけ");
+        var hc = stagesOf(makeProblem({ kind: "adder", lv: 1, cid: "ad1" }))[0].cols; check(hc[0].headName === "P＝C" && hc[1].headName === "Q" && hc[0].name === "P", "④ 初級の表の P の見出しに C を添える（図の札と同じ）");
+        hc = stagesOf(makeProblem({ kind: "adder", lv: 2, cid: "ad2" }))[0].cols; check(hc.every(function (x) { return x.headName === x.name; }), "④ 中級の見出しは P〜R のまま");
         check(TEXT.defsAdder.some(function (d) { return d === "Co：上の桁への桁上げ．"; }) && TEXT.learn.steps[5].text.join("").indexOf("Co は上の桁への桁上げ") >= 0, "Co の説明（ことば・解説 6）");
         check(TEXT.learn.steps[4].text[1].indexOf("表の 4 行目（A＝1，B＝1）の C＝1，S＝0") >= 0 && TEXT.ui.learnDesc.indexOf("全加算回路（挑戦）まで") >= 0 && TEXT.msg.endAdder2.indexOf("2 進数の 1＋1＋1＝11 と同じ") === 0 + TEXT.msg.endAdder2.indexOf("2 進数の 1＋1＋1＝11 と同じ"), "解説 5・learnDesc・④ 中級の終わりの文");
         check(TEXT.ui.halfTableNote.indexOf("解くときに見てよい表．") === 0 && !/（.*（/.test(TEXT.level[2] + "：" + TEXT.levelSubAdder[2]), "半加算回路の表の注・中級の見出しは括弧 1 段");
@@ -1319,9 +1416,9 @@ var LogicCore = (function () {
       check(TEXT.learn.steps.length === 6, "解説は 6 ステップ");
       // 解説の例：A＝1，B＝0 の行（章末問題12 の形 p05）
       (function () {
-        var v = evalOf(CIRC.p05), r = 2, want = "線1 ＝ " + v.g1[r] + "，線2 ＝ " + v.g2[r] + "，L ＝ " + v.g3[r];
+        var v = evalOf(CIRC.p05), r = 2, want = "P ＝ " + v.g1[r] + "，Q ＝ " + v.g2[r] + "，L ＝ " + v.g3[r];
         check(TEXT.learn.steps[3].text[1].indexOf(want) >= 0, "解説 4 の例の値が評価と一致 " + want);
-        check(CIRC.p05.wireName.g1 === "線1" && CIRC.p05.wireName.g2 === "線2", "解説 4 の線の名前");
+        check(CIRC.p05.wireName.g1 === "P" && CIRC.p05.wireName.g2 === "Q", "解説 4 の線の名前（P＝AND の出力，Q＝NOT の出力）");
       })();
       check(TEXT.learn.steps[4].text[1].indexOf("0＋0＝0，0＋1＝1，1＋0＝1，1＋1＝10") >= 0, "解説 5 の足し算");
       if (docs) {
@@ -1369,9 +1466,9 @@ var LogicCore = (function () {
       check(stagesOf(makeProblem({ kind: "basic", cid: "b_not" }))[0].cols[0].model.join("") === "10" && stagesOf(makeProblem({ kind: "basic", cid: "b_not" }))[0].rows === 2, "① NOT は 2 行");
       // 段の構成
       var pa = makeProblem({ kind: "adder", lv: 1, cid: "ad1" }), sa = stagesOf(pa);
-      check(sa.length === 2 && sa[0].cols.map(function (c2) { return c2.name; }).join() === "線1,線2,線3" && sa[1].cols.map(function (c2) { return c2.name; }).join() === "S", "④ 初級：線1〜線3 → S（C は線1）");
+      check(sa.length === 2 && sa[0].cols.map(function (c2) { return c2.name; }).join() === "P,Q,R" && sa[1].cols.map(function (c2) { return c2.name; }).join() === "S", "④ 初級：P〜R → S（C は P）");
       pa = makeProblem({ kind: "adder", lv: 2, cid: "ad2" }); sa = stagesOf(pa);
-      check(sa[0].cols.map(function (c2) { return c2.name + c2.sub; }).join() === "線1①S,線2①C,線3②C" && sa[1].cols.map(function (c2) { return c2.name; }).join() === "S,Co", "④ 中級：線1〜線3 → S，Co");
+      check(sa[0].cols.map(function (c2) { return c2.name + c2.sub; }).join() === "P①S,Q①C,R②C" && sa[1].cols.map(function (c2) { return c2.name; }).join() === "S,Co", "④ 中級：P〜R → S，Co");
       // 試行に数えない・文言の長さ
       check(Object.keys(CIRC).every(function (id) { return describeCircuit(CIRC[id]).length > 10; }), "図の説明がある");
     })();
