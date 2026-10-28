@@ -183,8 +183,9 @@ var LogicCore = (function () {
     ad1: { paper: "［4］半加算回路（例題7）", names: { g1: "P", g2: "Q", g3: "R" }, above: [["g1", "g2"]] }
   };
   function paperOf(c) { return PAPER[c.base || c.id] || null; }
-  /* 紙の図（第12回_回路図.tex の \ckFull）と同じ段の位置．部品・出力の枠の id → 段（0 が上）．全加算回路：箱①が上段，箱②が下段，OR が上段，出力 C が上・S が下（SPEC §11.5） */
-  var PAPER_ROWS = { ad2: { h1: 0, h2: 1, o1: 0, "out:C": 0, "out:S": 1 } };
+  /* 紙の図（第12回_回路図.tex の \ckFull・\ckHalf）と同じ段の位置．部品・出力の枠の id → 段（0 が上）．全加算回路：箱①が上段，箱②が下段，OR が上段，出力 C が上・S が下．
+     半加算回路（例題7）：AND（P）が上段，OR（Q）が下段，出力 C が上・S が下（P の線が C へまっすぐ伸びる）（SPEC §11.5） */
+  var PAPER_ROWS = { ad2: { h1: 0, h2: 1, o1: 0, "out:C": 0, "out:S": 1 }, ad1: { g1: 0, g2: 2, g3: 1, g4: 1, "out:C": 0, "out:S": 1 } };
   function rowsOfPaper(c) { return PAPER_ROWS[c.base || c.id] || null; }
 
   // 式の文字列（AND(A,NOT(B)) の形．画面には出さない内部の記法）を回路に直す
@@ -356,6 +357,10 @@ var LogicCore = (function () {
     var nodes = [], i;
     c.gates.forEach(function (g) { nodes.push({ id: g.id, kind: "gate", t: g.t, col: g.col, g: g, w: GATE_W[g.t], h: GATE_H[g.t] }); });
     c.outs.forEach(function (o) { nodes.push({ id: "out:" + o.name, kind: "out", t: "OUT", col: c.maxCol + 1, name: o.name, src: o.src, w: GATE_W.OUT, h: GATE_H.OUT }); });
+    if (rowsOfPaper(c)) {                                   // 紙の図の出力の枠の上下（C が上）：出力の枠を段の順に並べ直す（枠は出力の並びと別に，紙の並びで描く）
+      var pr = rowsOfPaper(c), outsN = nodes.filter(function (nd) { return nd.kind === "out"; }).sort(function (a, b) { return pr[a.id] - pr[b.id]; });
+      nodes = nodes.filter(function (nd) { return nd.kind !== "out"; }).concat(outsN);
+    }
     return nodes;
   }
   function layoutOnce(c, tags, nodes, byCol, slots, rowsN, maxH) {
@@ -542,7 +547,9 @@ var LogicCore = (function () {
     if (paperOf(c) && paperOf(c).above) paperOf(c).above.forEach(function (pr) {      // 紙の上下：同じ列の中で，上に描く部品を先に並べる（slotCombos は列の中の並びを変えない）
       byCol.forEach(function (l) { var ia = -1, ib = -1, t; l.forEach(function (nd, i) { if (nd.id === pr[0]) ia = i; if (nd.id === pr[1]) ib = i; }); if (ia >= 0 && ib >= 0 && ia > ib) { t = l[ia]; l[ia] = l[ib]; l[ib] = t; } });
     });
-    rowsN = Math.max.apply(null, byCol.map(function (l) { return l.length; })); maxH = Math.max.apply(null, nodes.map(function (nd) { return nd.h; }));
+    rowsN = Math.max.apply(null, byCol.map(function (l) { return l.length; }));
+    if (rowsOfPaper(c)) rowsN = Math.max(rowsN, 1 + Math.max.apply(null, Object.keys(rowsOfPaper(c)).map(function (k) { return rowsOfPaper(c)[k]; })));      // 紙の図の段の数（半加算回路は 3 段）
+    maxH = Math.max.apply(null, nodes.map(function (nd) { return nd.h; }));
     placements = product(byCol.map(function (l) { return slotCombos(rowsN, l.length); }));
     if (paperOf(c) && paperOf(c).above) placements = placements.filter(function (slots) {      // 紙の上下：[上, 下] の組は上の部品が小さい段
       var at = {};
@@ -1164,7 +1171,32 @@ var LogicCore = (function () {
         var code = sources[f].replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
         check(!OLD_ADD.test(code), "ソース（コメントを除く）に全加算回路の旧い入出力名が残っていない " + f);
       });
+      // README・SPEC の本文（現行の仕様）にも旧名が残っていない．履歴・経緯の節（§5.4・§11.1・§11.2・§11.4・§11.5）と，「初版」「旧名」と書いた経緯の行は除く
+      if (docs) Object.keys(docs).forEach(function (name) {
+        var skip = false, hits = [];
+        docs[name].split("\n").forEach(function (line) {
+          var m;
+          if (/^#{1,4} /.test(line)) skip = /^### (5\.4|11\.[1245]) /.test(line);
+          if (skip || /初版|旧名/.test(line)) return;
+          n++; m = OLD_WIRE.exec(line) || OLD_ADD.exec(line);
+          if (m) hits.push(line.slice(Math.max(0, m.index - 12), m.index + 16));
+        });
+        check(hits.length === 0, "文書（" + name + "）の現行の仕様に旧名（線の番号・全加算回路の旧い入出力名）が残っていない " + hits.slice(0, 2).join("／"));
+      });
       rep.extra.oldNameScan = n;
+    })();
+
+    /* ---- 半加算回路（例題7．ad1・ad1m）の図は紙（\ckHalf）と同じ配置：AND（P）が上，NOT が中，最後の AND と OR（Q）が下．出力 C が上・S が下で，P の線が C へまっすぐ伸びる ---- */
+    (function () {
+      ["ad1", "ad1m"].forEach(function (id) {
+        var c = CIRC[id], lay = layoutCircuit(c, true), N = {}, v = geomViolations(lay), rt;
+        lay.nodes.forEach(function (nd) { N[nd.id] = nd; });
+        rt = lay.routes.filter(function (r) { return r.sink === "out:C"; })[0];
+        check(N["out:C"].slot === 0 && N["out:S"].slot === 1 && N.g1.slot === 0 && N.g3.slot === 1 && N.g4.slot === 1 && N.g2.slot === 2, "紙の図 " + id + "：出力 C が上・S が下，AND（P）が 1 段目，NOT と最後の AND が 2 段目，OR（Q）が 3 段目");
+        check(!!rt && rt.type === "straight" && N.g1.col < N.g3.col && N.g3.col < N.g4.col && N.g4.col < N["out:C"].col, "紙の図 " + id + "：P の線が C へまっすぐ伸びる（途中の線の分岐だけ）");
+        check(v.length === 0 && lay.w <= 360 && lay.h <= 230, "紙の図 " + id + "：幾何の検査が通る（" + lay.w + "×" + lay.h + "）");
+        check(c.wireName.g1 === "P" && c.outs.filter(function (o) { return o.name === "C"; })[0].src === "g1" && N["out:C"].y < N["out:S"].y, "紙の図 " + id + "：C は P の線");
+      });
     })();
 
     /* ---- 全加算回路の図は紙（第12回_回路図.tex の \ckFull）と同じ配置：箱①が上段左・箱②が下段・OR が上段右・出力 C が上，S が下．箱の出力は C が上，S が下（紙の \gBOX） ---- */
