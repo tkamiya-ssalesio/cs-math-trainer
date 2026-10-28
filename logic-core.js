@@ -88,7 +88,7 @@ var LogicCore = (function () {
       chooseTitle: "出力 L が左の表になる回路を，全部選ぼう．1 つとは限りません．",
       chooseTitleAbove: "出力 L が下の表になる回路を，全部選ぼう．1 つとは限りません．",
       tableOf: "真理値表", inputHead: "入力", pickAria: "回路", pickNone: "選んだ回路", selected: "選択中", notSelected: "未選択", correctOpt: "正しい回路", chosenOpt: "選んだ回路",
-      halfTable: "半加算回路の表", halfTableNote: "解くときに見てよい表．A と B を足した桁上げ C と和 S．",
+      halfTable: "半加算回路の表", halfTableNote: "箱①・②の C・S を求めるときに見てよい表．箱②には Q と X が入る．",       // 「半加算回路の表」の折りたたみは中級（全加算回路）のときだけ出る
       figAlt: "回路図", rowPrefix: "行目", emptyCell: "未入力",
       instrBasic: "図記号を見て，出力 L の列を書こう（上の行から順に）．",
       instrWires: "図の線 1 本ずつの値を，列ごとに書こう（左の列から）．",
@@ -266,9 +266,9 @@ var LogicCore = (function () {
   function refLabel(c, ref) { return isIn(c, ref) ? ref : (c.wireName[ref] || (c.outs.filter(function (x) { return x.src === ref; })[0] || { name: ref }).name); }
   function haLabel(c, ref) { var f = c.finals.filter(function (x) { return x.src === ref; })[0]; return f ? "外への出力 " + f.name : refLabel(c, ref); }
   function describeCircuit(c, withNames) {
-    var out = [];
+    var out = [], nHA = c.gates.filter(function (x) { return x.t === "HA"; }).length, kHA = 0;
     c.gates.forEach(function (g) {
-      var ins = g.in.map(function (r) { return withNames === false && !isIn(c, r) ? "前の部品" : refLabel(c, r); }), tn = g.t === "HA" ? "半加算回路" : g.t, o;
+      var ins = g.in.map(function (r) { return withNames === false && !isIn(c, r) ? "前の部品" : refLabel(c, r); }), tn = g.t === "HA" ? (nHA >= 2 ? CIRCLED[kHA++] : "") + "半加算回路" : g.t, o;      // 箱が 2 つ以上のときは図と同じ「①半加算回路」「②半加算回路」
       if (g.t === "HA") o = "出力の C は " + haLabel(c, g.id + ".C") + "，S は " + haLabel(c, g.id + ".S");       // 箱の出力の C・S と，外の出力 C・S を区別して読み上げる
       else o = "出力は " + refLabel(c, g.id);
       out.push(ins.join(" と ") + " が " + tn + " に入る．" + o + "．");
@@ -318,7 +318,7 @@ var LogicCore = (function () {
   function adderCircuit(lv) {
     var c;
     if (lv === 1) {
-      c = { id: "ad1", inputs: AB.slice(), gates: [{ id: "g1", t: "AND", in: ["A", "B"] }, { id: "g2", t: "OR", in: ["A", "B"] }, { id: "g3", t: "NOT", in: ["g1"] }, { id: "g4", t: "AND", in: ["g2", "g3"] }],
+      c = { id: "ad1", inputs: AB.slice(), gates: [{ id: "g1", t: "AND", in: ["A", "B"] }, { id: "g2", t: "OR", in: ["A", "B"] }, { id: "g3", t: "NOT", in: ["g1"] }, { id: "g4", t: "AND", in: ["g3", "g2"] }],
             outs: [{ name: "S", src: "g4", stage: true }, { name: "C", src: "g1", stage: false }] };
     } else {
       c = { id: "ad2", inputs: ["A", "B", "X"], gates: [{ id: "h1", t: "HA", in: ["A", "B"] }, { id: "h2", t: "HA", in: ["h1.S", "X"] }, { id: "o1", t: "OR", in: ["h1.C", "h2.C"] }],
@@ -711,7 +711,15 @@ var LogicCore = (function () {
       for (i = 0; i < perms.length; i++) if (!(perms[i][0] === 0 && perms[i][1] === 1 && perms[i][2] === 2) && eqArr(s, permRows(m, 3, perms[i]))) { id = "W-5"; break; }
     }
     if (!id) id = "W-0";
-    return { id: id, text: id === "W-5" ? hint5(c) : id === "W-0" ? hint0(g) : HINTS[id] };
+    return { id: id, text: id === "W-5" ? hint5(c) : id === "W-0" ? hint0(g) : id === "W-6" ? hint6(c, st, col) : HINTS[id] };
+  }
+  // W-6：全加算回路の途中の線の段だけ，どの箱の C・S かを名前つきで言う（半加算回路・外への出力の列は HINTS の文のまま）
+  function hint6(c, st, col) {
+    var g = col.gate, k = 0, i, wc, ws;
+    if (st.id !== "wires" || c.gates.filter(function (x) { return x.t === "HA"; }).length < 2) return HINTS["W-6"];
+    for (i = 0; i < c.gates.length; i++) { if (c.gates[i].t === "HA") { if (c.gates[i] === g) break; k++; } }
+    wc = c.wireName[refOf(g, "C")]; ws = c.wireName[refOf(g, "S")];
+    return HINTS["W-6"].replace("桁上げ C と和 S を逆", "箱" + CIRCLED[k] + "の C" + (wc ? "（" + wc + "）と " : " と ") + "S" + (ws ? "（" + ws + "）を" : " を") + "逆");
   }
   function hint0(g) { var tn = g.t === "HA" ? "半加算回路" : g.t; return HINTS["W-0"].replace("{N}", g.t === "HA" ? "箱" : "部品").replace("{T}", tn).replace("{U}", g.t === "HA" ? tn : " " + tn + " "); }      // 部品の種類を文に差し込む
   function hint5(c) { return HINTS["W-5"].replace("A，B，C", c.inputs.join("，")); }       // 入力名は回路の入力名（全加算回路は A，B，X）
@@ -754,11 +762,11 @@ var LogicCore = (function () {
     j.wrongCells.forEach(function (w) { (byCol[w.c] = byCol[w.c] || []).push(w.r); });
     parts = Object.keys(byCol).map(function (ci) {
       var rows = byCol[ci], nm = st.cols[ci].name;
-      if (rows.length === 1) return nm + "の " + (rows[0] + 1) + " 行目（" + rowName(p.circuit, rows[0]) + "）";
-      return nm + "の " + rows.map(function (r) { return r + 1; }).join("・") + " 行目";
+      if (rows.length === 1) return nm + " の " + (rows[0] + 1) + " 行目（" + rowName(p.circuit, rows[0]) + "）";
+      return nm + " の " + rows.map(function (r) { return r + 1; }).join("・") + " 行目";
     });
     if (j.wrongCells.length >= 4 || parts.length >= 3) return j.wrongCells.length + "か所ちがいます";
-    return parts.join("と") + "がちがいます";
+    return parts.join(" と ") + "がちがいます";
   }
   /* ---- 段の状態遷移（1回目誤り→もう1回，2回目も誤りなら値を見せる） ---- */
   function newStageState() { return { attempts: 0, result: null }; }
@@ -929,7 +937,7 @@ var LogicCore = (function () {
     })(TEXT);
     out.push.apply(out, Object.keys(HINTS).filter(function (x) { return x !== "W-0"; }).map(function (x) { return HINTS[x]; }));
     ["AND", "OR", "NOT", "HA"].forEach(function (t) { out.push(hint0({ t: t })); });
-    out.push(HINT_C1, HINT_C2, msgStumbled(["a", "b"]), hint5(CIRC.ad2), hint5(CIRC.r01));
+    out.push(HINT_C1, HINT_C2, msgStumbled(["a", "b"]), hint5(CIRC.ad2), hint5(CIRC.r01), hint6(CIRC.ad2, { id: "wires" }, { gate: CIRC.ad2.gates[0] }), hint6(CIRC.ad2, { id: "wires" }, { gate: CIRC.ad2.gates[1] }));
     Object.keys(CIRC).forEach(function (id) { out.push(describeCircuit(CIRC[id])); });
     return out;
   }
@@ -1196,6 +1204,15 @@ var LogicCore = (function () {
         check(!!rt && rt.type === "straight" && N.g1.col < N.g3.col && N.g3.col < N.g4.col && N.g4.col < N["out:C"].col, "紙の図 " + id + "：P の線が C へまっすぐ伸びる（途中の線の分岐だけ）");
         check(v.length === 0 && lay.w <= 360 && lay.h <= 230, "紙の図 " + id + "：幾何の検査が通る（" + lay.w + "×" + lay.h + "）");
         check(c.wireName.g1 === "P" && c.outs.filter(function (o) { return o.name === "C"; })[0].src === "g1" && N["out:C"].y < N["out:S"].y, "紙の図 " + id + "：C は P の線");
+        var rp = lay.routes.filter(function (r) { return r.sink === "g4"; }).sort(function (x, y) { return x.pin - y.pin; }), cross = 0, i1, i2, sa, sb, H, V;
+        check(rp.length === 2 && rp[0].net === "g3" && rp[1].net === "g2" && rp[0].yp < rp[1].yp, "紙の図 " + id + "：最後の AND の入力は，上が R（NOT），下が Q（OR）");
+        for (i1 = 0; i1 < lay.segs.length; i1++) for (i2 = i1 + 1; i2 < lay.segs.length; i2++) {      // 途中の線どうし（入力の幹線を除く）の交差
+          sa = lay.segs[i1]; sb = lay.segs[i2];
+          if (sa.net === sb.net || sa.h === sb.h || /^in:/.test(sa.net) || /^in:/.test(sb.net)) continue;
+          H = sa.h ? sa : sb; V = sa.h ? sb : sa;
+          if (V.x1 > H.x1 && V.x1 < H.x2 && H.y1 > V.y1 && H.y1 < V.y2) cross++;
+        }
+        check(cross === 0, "紙の図 " + id + "：途中の線（P・Q・R）どうしが交わらない（交差 " + cross + "）");
       });
     })();
 
@@ -1209,6 +1226,7 @@ var LogicCore = (function () {
         check(N.h1.y < N.h2.y && N["out:C"].y < N["out:S"].y && N.h1.x < N.h2.x, "紙の図 " + id + "：箱①が左上，箱②がその右下");
         check(outPinY("HA", "C") < outPinY("HA", "S") && outKeys(c.gates[0]).join() === "C,S", "紙の \\gBOX：箱の出力は C が上，S が下 " + id);
         check(v.length === 0 && lay.w <= 380 && lay.h <= 230, "紙の図 " + id + "：幾何の検査が通る（" + lay.w + "×" + lay.h + "）");
+        check(describeCircuit(c).indexOf("①半加算回路 に入る") > 0 && describeCircuit(c).indexOf("②半加算回路 に入る") > 0 && describeCircuit(CIRC.ad1).indexOf("半加算回路") < 0, "全加算回路の図の説明は「①半加算回路」「②半加算回路」と番号つき " + id);
         check(c.wires.map(function (w) { return w.name + ":" + w.ref; }).join() === "P:h1.C,Q:h1.S,R:h2.C", "全加算回路の途中の線：左の列の上から P＝箱①の C，Q＝箱①の S，次の列の R＝箱②の C " + id);
         g1 = lay.nodes.filter(function (x) { return x.id === "h1"; })[0];
         check(lay.tags.filter(function (t) { return t.name === "P"; })[0].y < lay.tags.filter(function (t) { return t.name === "Q"; })[0].y && g1.kind === "gate", "紙の図 " + id + "：札 P は Q の上");
@@ -1361,7 +1379,11 @@ var LogicCore = (function () {
               if (hid === "W-1") check(T === "OR" && s === (x & y) && s !== mm, "W-1 の主張");
               if (hid === "W-2") check(T === "AND" && s === (x | y) && s !== mm, "W-2 の主張");
               if (hid === "W-3") check(T === "NOT" && s === x && mm === (~x & M), "W-3 の主張");
-              if (hid === "W-6") check(T === "HA" && s !== mm, "W-6 の主張");
+              if (hid === "W-6") {
+                var w6 = { "h1.C": "箱①の C（P）と S（Q）を逆にしていませんか", "h1.S": "箱①の C（P）と S（Q）を逆にしていませんか", "h2.C": "箱②の C（R）と S を逆にしていませんか" };
+                check(T === "HA" && s !== mm, "W-6 の主張");
+                check(st.id === "wires" ? j2.diag.text.indexOf(w6[cl.ref]) === 0 && j2.diag.text.indexOf("1＋1＝10 のとき，C＝1（上の桁），S＝0（1 桁目）．") > 0 : j2.diag.text === HINTS["W-6"], "W-6 の文：全加算回路の途中の線の段は箱と名前つき，それ以外は今の文 " + c.id + " " + st.id + " " + cl.name);
+              }
               if (hid === "W-5") check(j2.diag.text.indexOf("左から " + c.inputs.join("，") + " の順に") >= 0 && j2.diag.text.indexOf("000，001，010，011，100，101，110，111") > 0, "W-5 の文は回路の入力名（" + c.inputs.join("，") + "）から作る " + c.id);
               if (hid === "W-7") check(T === "HA" && key === "S" && mm === (x ^ y) && s === (x | y), "W-7 の主張");
             }
@@ -1383,7 +1405,7 @@ var LogicCore = (function () {
       o = attempt(p, w, s0, vals); check(o.ok && o.result === "ok1" && o.final && o.counted, "1回目で正解 ok1");
       o = attempt(p, w, advance(s0, false), vals); check(o.ok && o.result === "ok2", "2回目で正解 ok2");
       wrongVals = vals.map(function (cl) { return cl.slice(); }); wrongVals[0][0] = wrongVals[0][0] === "0" ? "1" : "0";
-      o = attempt(p, w, s0, wrongVals); check(!o.ok && !o.final && o.st.attempts === 1 && o.hint && o.detail.indexOf("Pの 1 行目（A＝0，B＝0）がちがいます") === 0 && o.wrongCells.length === 1, "1回目の誤り：ヒントを 1 つ " + o.detail);
+      o = attempt(p, w, s0, wrongVals); check(!o.ok && !o.final && o.st.attempts === 1 && o.hint && o.detail.indexOf("P の 1 行目（A＝0，B＝0）がちがいます") === 0 && o.wrongCells.length === 1, "1回目の誤り：ヒントを 1 つ " + o.detail);
       o = attempt(p, w, o.st, wrongVals); check(!o.ok && o.final && o.reveal && o.result === "rev", "2回目も誤り：値を見せる rev");
       empt = vals.map(function (cl) { return cl.slice(); }); empt[1][2] = "";
       o = attempt(p, w, s0, empt); check(!o.counted && o.st.attempts === 0 && o.empty.length === 1 && o.head === "あと 1 マス入れよう．", "空きがあるときは試行に数えない");
@@ -1419,7 +1441,7 @@ var LogicCore = (function () {
         hc = stagesOf(makeProblem({ kind: "adder", lv: 2, cid: "ad2" }))[0].cols; check(hc.every(function (x) { return x.headName === x.name; }), "④ 中級の見出しは P〜R のまま");
         check(TEXT.defsAdder.some(function (d) { return d === "X：下の桁からの桁上げ．C：上の桁への桁上げ．"; }) && TEXT.learn.steps[5].text.join("").indexOf("下の桁からの桁上げ X も足す") >= 0 && TEXT.learn.steps[5].text.join("").indexOf("C は上の桁への桁上げ，S は和（1 桁目）") >= 0, "X・C の説明（ことば・解説 6．紙の呼び方）");
         check(TEXT.learn.steps[4].text[1].indexOf("表の 4 行目（A＝1，B＝1）の C＝1，S＝0") >= 0 && TEXT.ui.learnDesc.indexOf("全加算回路（挑戦）まで") >= 0 && TEXT.msg.endAdder2.indexOf("2 進数の 1＋1＋1＝11 と同じ") === 0 + TEXT.msg.endAdder2.indexOf("2 進数の 1＋1＋1＝11 と同じ"), "解説 5・learnDesc・④ 中級の終わりの文");
-        check(TEXT.ui.halfTableNote.indexOf("解くときに見てよい表．") === 0 && !/（.*（/.test(TEXT.level[2] + "：" + TEXT.levelSubAdder[2]), "半加算回路の表の注・中級の見出しは括弧 1 段");
+        check(TEXT.ui.halfTableNote === "箱①・②の C・S を求めるときに見てよい表．箱②には Q と X が入る．" && !/（.*（/.test(TEXT.level[2] + "：" + TEXT.levelSubAdder[2]), "半加算回路の表の注・中級の見出しは括弧 1 段");
         check(TEXT.learn.close === "論理回路のメニューへ" && TEXT.ui.backToMenu === "カテゴリ選択に戻る", "解説の戻るとサブメニューの戻るを区別");
       })();
       // 記録のまとめ方
