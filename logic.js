@@ -86,8 +86,8 @@
       if (nd.t === "NOT") grp.appendChild(sv("circle", { cx: nd.x + nd.w - 3, cy: nd.y + nd.h / 2, r: 3, "class": "lg-shape" }));
       if (nd.t === "HA") {
         grp.appendChild(sv("text", { x: nd.x + nd.w / 2, y: nd.y + 26, "class": "lg-gname lg-small", "text-anchor": "middle" }, CIRC[hIdx++] + "半加算回路"));
-        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 13, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "S"));
-        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 40, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "C"));
+        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 13, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "C"));
+        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 40, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "S"));
       } else grp.appendChild(sv("text", { x: nd.x + (nd.t === "NOT" ? 16 : nd.t === "AND" ? 20 : 21), y: nd.y + nd.h / 2 + 3.6, "class": "lg-gname", "text-anchor": "middle" }, nd.t));
       svg.appendChild(grp);
     });
@@ -610,7 +610,7 @@
   function visFull() {
     var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad2, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad2", [[wn("ad2", "h1.S"), "h1.S"], [wn("ad2", "h1.C"), "h1.C"], [wn("ad2", "h2.C"), "h2.C"], ["S", "h2.S"], ["Co", "o1"]], [6, 7]));
+    box.appendChild(tableFromEval("ad2", [[wn("ad2", "h1.C"), "h1.C"], [wn("ad2", "h1.S"), "h1.S"], [wn("ad2", "h2.C"), "h2.C"], ["C", "o1"], ["S", "h2.S"]], [6, 7]));
     return box;
   }
   function visual(spec) {
