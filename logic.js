@@ -86,7 +86,7 @@
       if (nd.t === "NOT") grp.appendChild(sv("circle", { cx: nd.x + nd.w - 3, cy: nd.y + nd.h / 2, r: 3, "class": "lg-shape" }));
       if (nd.t === "HA") {
         grp.appendChild(sv("text", { x: nd.x + nd.w / 2, y: nd.y + 26, "class": "lg-gname lg-small", "text-anchor": "middle" }, CIRC[hIdx++] + "半加算回路"));
-        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 14, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "S"));
+        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 13, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "S"));
         grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 40, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "C"));
       } else grp.appendChild(sv("text", { x: nd.x + (nd.t === "NOT" ? 16 : nd.t === "AND" ? 20 : 21), y: nd.y + nd.h / 2 + 3.6, "class": "lg-gname", "text-anchor": "middle" }, nd.t));
       svg.appendChild(grp);
