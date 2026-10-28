@@ -229,6 +229,11 @@ def run_solve(b):
         # 解き終わり→次の問題で，位置が動かない・図に答えがない
         c = pg.get_attribute('#lg-fig svg', 'data-circuit') if kind != 'choose' else ''
         rec(c == '' or ('"table"' not in c and '"model"' not in c), 'data-circuit に答えがない')
+        # 途中の線の名前は P・Q・R・T（S や旧名「線1」ではない）で，図の札と data-circuit が一致する
+        if kind != 'choose' and kind != 'basic':
+            cj = json.loads(c); nm = [w['name'] for w in cj['wires']]
+            tags = pg.evaluate("()=>[...document.querySelectorAll('#lg-fig .lg-tag text')].map(t=>t.textContent.split('＝')[0])")
+            rec(nm == ['P', 'Q', 'R', 'T'][:len(nm)] and sorted(tags) == sorted(nm), '途中の線の名前 %s・札 %s' % (nm, tags))
     # 1b) 375×812：答え合わせを窓の下端で押しても，誤りの結果欄（「おしい」とヒント）が窓に入る．③ は題が最初の画面に見える
     JS_FB = "()=>{const r=document.getElementById('lg-feedback').getBoundingClientRect();return [r.top,r.bottom,innerHeight,document.getElementById('lg-feedback').innerText.length]}"
     for kind, lv in (('combine', 1), ('combine', 2), ('adder', 2), ('choose', 2)):

@@ -599,17 +599,18 @@
     for (r = 0; r < R; r++) { rows.push(c.inputs.map(function (nm, i2) { return C.inputBit(n, i2, r); }).concat(cols.map(function (cc) { return v[cc[1]][r]; }))); }
     return miniTable(c.inputs.concat(cols.map(function (cc) { return cc[0]; })), rows, hl, hlRow);
   }
+  function wn(cid, ref) { return C.CIRC[cid].wireName[ref]; }                               // 途中の線の名前（図の上下の位置で決まる）
   function LogicCoreEval(c) { return C.evalOf(c); }
   function visHalf() {
     var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad1, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad1", [["線1(C)", "g1"], ["線2", "g2"], ["線3", "g3"], ["S", "g4"]], [2, 5], 3));
+    box.appendChild(tableFromEval("ad1", [[wn("ad1", "g1") + "＝C", "g1"], [wn("ad1", "g2"), "g2"], [wn("ad1", "g3"), "g3"], ["S", "g4"]], [2, 5], 3));
     return box;
   }
   function visFull() {
     var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad2, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad2", [["線1", "h1.S"], ["線2", "h1.C"], ["線3", "h2.C"], ["S", "h2.S"], ["Co", "o1"]], [6, 7]));
+    box.appendChild(tableFromEval("ad2", [[wn("ad2", "h1.S"), "h1.S"], [wn("ad2", "h1.C"), "h1.C"], [wn("ad2", "h2.C"), "h2.C"], ["S", "h2.S"], ["Co", "o1"]], [6, 7]));
     return box;
   }
   function visual(spec) {
