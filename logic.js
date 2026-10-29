@@ -86,8 +86,8 @@
       if (nd.t === "NOT") grp.appendChild(sv("circle", { cx: nd.x + nd.w - 3, cy: nd.y + nd.h / 2, r: 3, "class": "lg-shape" }));
       if (nd.t === "HA") {
         grp.appendChild(sv("text", { x: nd.x + nd.w / 2, y: nd.y + 26, "class": "lg-gname lg-small", "text-anchor": "middle" }, CIRC[hIdx++] + "半加算回路"));
-        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 13, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "S"));
-        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 40, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "C"));
+        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 13, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "C"));
+        grp.appendChild(sv("text", { x: nd.x + nd.w - 4, y: nd.y + 40, "class": "lg-gname lg-tiny", "text-anchor": "end" }, "S"));
       } else grp.appendChild(sv("text", { x: nd.x + (nd.t === "NOT" ? 16 : nd.t === "AND" ? 20 : 21), y: nd.y + nd.h / 2 + 3.6, "class": "lg-gname", "text-anchor": "middle" }, nd.t));
       svg.appendChild(grp);
     });
@@ -560,7 +560,11 @@
   }
   function miniTable(headers, rows, hl, hlRow) {                                      // hl：強調する列の番号
     var tbl = el("table", "lg-mini"), thead = el("thead"), tr = el("tr"), tb = el("tbody");
-    headers.forEach(function (h, i) { var th = el("th", hl && hl.indexOf(i) >= 0 ? "lg-hl" : "", h); th.setAttribute("scope", "col"); tr.appendChild(th); });
+    headers.forEach(function (h, i) {                                      // h：文字，または [名前, 2 行目]（練習の表の見出しと同じ 2 行）
+      var th = el("th", hl && hl.indexOf(i) >= 0 ? "lg-hl" : "", Array.isArray(h) ? h[0] : h);
+      if (Array.isArray(h)) th.appendChild(el("span", "lg-msub", h[1]));
+      th.setAttribute("scope", "col"); tr.appendChild(th);
+    });
     thead.appendChild(tr); tbl.appendChild(thead);
     rows.forEach(function (row, ri) { var r = el("tr"); row.forEach(function (x, i) { r.appendChild(el("td", (hl && hl.indexOf(i) >= 0) || ri === hlRow ? "lg-hl" : "", String(x))); }); tb.appendChild(r); });
     tbl.appendChild(tb); return tbl;
@@ -597,7 +601,7 @@
   function tableFromEval(cid, cols, hl, hlRow) {                                       // cols：[見出し, 参照]
     var c = C.CIRC[cid], n = c.inputs.length, R = 1 << n, rows = [], r, i, v = LogicCoreEval(c);
     for (r = 0; r < R; r++) { rows.push(c.inputs.map(function (nm, i2) { return C.inputBit(n, i2, r); }).concat(cols.map(function (cc) { return v[cc[1]][r]; }))); }
-    return miniTable(c.inputs.concat(cols.map(function (cc) { return cc[0]; })), rows, hl, hlRow);
+    return miniTable(c.inputs.concat(cols.map(function (cc) { return cc[2] ? [cc[0], cc[2]] : cc[0]; })), rows, hl, hlRow);
   }
   function wn(cid, ref) { return C.CIRC[cid].wireName[ref]; }                               // 途中の線の名前（図の上下の位置で決まる）
   function LogicCoreEval(c) { return C.evalOf(c); }
@@ -610,7 +614,9 @@
   function visFull() {
     var box = el("div", "lg-vhalf"), fig = drawCircuit(C.CIRC.ad2, { tags: true, scale: 1.8 });
     box.appendChild(fig);
-    box.appendChild(tableFromEval("ad2", [[wn("ad2", "h1.S"), "h1.S"], [wn("ad2", "h1.C"), "h1.C"], [wn("ad2", "h2.C"), "h2.C"], ["S", "h2.S"], ["Co", "o1"]], [6, 7]));
+    var cs = C.stagesOf(C.makeProblem({ kind: "adder", lv: 2, cid: "ad2" })), sub = {};          // 見出しの 2 行目は練習の表と同じ（①C・①S・②C・OR・②S）
+    cs.forEach(function (st) { st.cols.forEach(function (cl) { sub[cl.ref] = cl.sub; }); });
+    box.appendChild(tableFromEval("ad2", [[wn("ad2", "h1.C"), "h1.C", sub["h1.C"]], [wn("ad2", "h1.S"), "h1.S", sub["h1.S"]], [wn("ad2", "h2.C"), "h2.C", sub["h2.C"]], ["C", "o1", sub.o1], ["S", "h2.S", sub["h2.S"]]], [6, 7]));
     return box;
   }
   function visual(spec) {

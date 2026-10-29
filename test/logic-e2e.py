@@ -1,6 +1,8 @@
 # 実ブラウザ（Playwright の Chromium）で，論理回路の全入力経路と，幅ごとの収まりを確かめる．
 #   python3 test/logic-e2e.py [種] [URL] [部分]      部分＝solve,storage,links,layout のうち実行するもの（既定は全部）
 #   先に別の端末で  python3 -m http.server 8765  をこのフォルダ（cs-math-trainer の直下）で動かしておく（URL の既定は http://localhost:8765/index.html）．
+#   ※ python3 -m http.server は待ち行列の既定が 5 で，Chromium の並列の要求が ERR_CONNECTION_RESET で落ち，「読み込みに失敗した要求が残る」になることがある．
+#     socketserver の request_queue_size を 256 にした ThreadingHTTPServer（http.server の派生）でこのフォルダを配ること．他のポートのサーバーを pkill で巻き込まない（自分が起動した PID だけを止める）．
 # 確かめること：
 #   1. 全種類×難易度（AND・OR・NOT／組み合わせ 初級・中級／回路を選ぶ 初級・中級／半加算・全加算 初級・中級）を，タップ（タッチ有効の 375px）・キーボード（半角・全角・テンキー・日本語入力のときの code だけの keydown）で解く
 #      答えは画面の data-circuit（部品と接続．答えを含まない）から，Python の別実装で自分で計算する（アプリの内部は見ない）
